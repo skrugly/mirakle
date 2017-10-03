@@ -1,20 +1,20 @@
+import com.googlecode.streamflyer.core.ModifyingWriter
+import com.googlecode.streamflyer.regex.RegexModifier
+import com.googlecode.streamflyer.regex.addons.tokens.Token
+import com.googlecode.streamflyer.regex.addons.tokens.TokenProcessor
+import com.googlecode.streamflyer.regex.addons.tokens.TokensMatcher
 import com.instamotor.BuildConfig
+import org.apache.commons.io.output.WriterOutputStream
 import org.gradle.StartParameter
 import org.gradle.api.Plugin
 import org.gradle.api.invocation.Gradle
-import org.gradle.api.tasks.Exec
-import java.io.*
-import com.googlecode.streamflyer.regex.RegexModifier
-import com.googlecode.streamflyer.core.ModifyingWriter
-import com.googlecode.streamflyer.regex.addons.tokens.Token
-import com.googlecode.streamflyer.regex.addons.tokens.TokenProcessor
-import org.apache.commons.io.output.WriterOutputStream
-import java.io.OutputStreamWriter
-import com.googlecode.streamflyer.regex.addons.tokens.TokensMatcher
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
 import org.gradle.api.logging.configuration.ShowStacktrace
-import org.gradle.internal.time.Clock
+import org.gradle.api.tasks.Exec
+import java.io.File
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 
 class Mirakle : Plugin<Gradle> {
     override fun apply(gradle: Gradle) {
@@ -25,7 +25,7 @@ class Mirakle : Plugin<Gradle> {
         if (gradle.startParameter.excludedTaskNames.remove("mirakle")) return
         if (gradle.startParameter.isDryRun) return
 
-        val clock = Clock()
+        val timer = Timer()
 
         gradle.assertNonSupportedFeatures()
 
@@ -100,8 +100,8 @@ class Mirakle : Plugin<Gradle> {
                     val mirakle = task("mirakle").dependsOn(upload, execute, download)
 
                     upload.doFirst {
-                        if (gradle.startParameter.buildFile.name == "mirakle_build_file_stub") {
-                            gradle.startParameter.buildFile.delete()
+                        if (gradle.startParameter.buildFile!!.name == "mirakle_build_file_stub") {
+                            gradle.startParameter.buildFile!!.delete()
                         }
                     }
 
@@ -112,7 +112,7 @@ class Mirakle : Plugin<Gradle> {
 
 
                     gradle.logTasks(upload, execute, download)
-                    gradle.logBuild(clock)
+                    gradle.logBuild(timer)
                 }
             }
         }

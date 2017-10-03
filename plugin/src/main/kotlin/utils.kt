@@ -4,23 +4,22 @@ import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
-import org.gradle.internal.time.Clock
 import kotlin.properties.Delegates
 
 fun Gradle.logTasks(vararg task: Task) {
     task.forEach { targetTask ->
         addListener(object : TaskExecutionListener {
-            var clock by Delegates.notNull<Clock>()
+            var timer by Delegates.notNull<Timer>()
 
             override fun beforeExecute(task: Task) {
                 if (task == targetTask) {
-                    clock = Clock()
+                    timer = Timer()
                 }
             }
 
             override fun afterExecute(task: Task, state: TaskState) {
                 if (task == targetTask) {
-                    val elapsed = clock.elapsed
+                    val elapsed = timer.elapsed
                     buildFinished {
                         println("Task ${task.name} took: $elapsed")
                     }
@@ -30,7 +29,7 @@ fun Gradle.logTasks(vararg task: Task) {
     }
 }
 
-fun Gradle.logBuild(clock: Clock) {
+fun Gradle.logBuild(clock: Timer) {
     useLogger(object : BuildAdapter() {})
     buildFinished {
         println("Total time : ${clock.elapsed}")
