@@ -4,24 +4,22 @@ import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
-import kotlin.properties.Delegates
 
 fun Gradle.logTasks(vararg task: Task) {
     task.forEach { targetTask ->
         addListener(object : TaskExecutionListener {
-            var timer by Delegates.notNull<Timer>()
+            var startTime: Long = 0
 
             override fun beforeExecute(task: Task) {
                 if (task == targetTask) {
-                    timer = Timer()
+                    startTime = System.currentTimeMillis()
                 }
             }
 
             override fun afterExecute(task: Task, state: TaskState) {
                 if (task == targetTask) {
-                    val elapsed = timer.elapsed
                     buildFinished {
-                        println("Task ${task.name} took: $elapsed")
+                        println("Task ${task.name} took: ${prettyTime(System.currentTimeMillis() - startTime)}")
                     }
                 }
             }
@@ -29,16 +27,31 @@ fun Gradle.logTasks(vararg task: Task) {
     }
 }
 
-fun Gradle.logBuild(clock: Timer) {
+fun Gradle.logBuild(startTime: Long) {
     useLogger(object : BuildAdapter() {})
     buildFinished {
-        println("Total time : ${clock.elapsed}")
+        println("Total time : ${prettyTime(System.currentTimeMillis() - startTime)}")
     }
 }
 
 fun Gradle.assertNonSupportedFeatures() {
     if (startParameter.isContinuous) throw MirakleException("--continuous is not supported yet")
     if (startParameter.includedBuilds.isNotEmpty()) throw MirakleException("Included builds is not supported yet")
+}
+
+private const val MS_PER_MINUTE: Long = 60000
+private const val MS_PER_HOUR = MS_PER_MINUTE * 60
+
+fun prettyTime(timeInMs: Long): String {
+    val result = StringBuffer()
+    if (timeInMs > MS_PER_HOUR) {
+        result.append(timeInMs / MS_PER_HOUR).append(" hrs ")
+    }
+    if (timeInMs > MS_PER_MINUTE) {
+        result.append(timeInMs % MS_PER_HOUR / MS_PER_MINUTE).append(" mins ")
+    }
+    result.append(timeInMs % MS_PER_MINUTE / 1000.0).append(" secs")
+    return result.toString()
 }
 
 class MirakleException(message: String) : RuntimeException(message)

@@ -25,7 +25,7 @@ class Mirakle : Plugin<Gradle> {
         if (gradle.startParameter.excludedTaskNames.remove("mirakle")) return
         if (gradle.startParameter.isDryRun) return
 
-        val timer = Timer()
+        val startTime = System.currentTimeMillis()
 
         gradle.assertNonSupportedFeatures()
 
@@ -112,7 +112,7 @@ class Mirakle : Plugin<Gradle> {
 
 
                     gradle.logTasks(upload, execute, download)
-                    gradle.logBuild(timer)
+                    gradle.logBuild(startTime)
                 }
             }
         }
