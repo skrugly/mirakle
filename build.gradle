@@ -28,6 +28,9 @@ allprojects {
         version = rootProject.version
         packageName = rootProject.group
         clsName = 'BuildConfig'
+        //Actually, Mirakle works with Gradle 3.3+.
+        //But tests uses Gradle Kotlin Script, that available starting 4.0
+        //TODO refactor tests to use Groovy in build scripts to be able to run test on 3.3, 3.4, 3.5
         buildConfigField 'String[]', 'SUPPORTED_GRADLE_VERSIONS', '{"4.2.1", "4.2", "4.1", "4.0"}'
     }
 

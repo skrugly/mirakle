@@ -1,7 +1,18 @@
 # Mirakle
 A Gradle plugin that allows you to move build process from a local machine to a remote one.
 
-Works seamlessly with IntelliJ IDEA and Android Studio. No plugin required.
+Compatible with Gradle 3.3+. Works seamlessly with IntelliJ IDEA and Android Studio.
+
+#### Why
+Remote machine supposed to be much performant than you working machine.
+Also having a sufficient network bandwidth or small amount of data that your build produce, you gain **build speed boost**.
+
+#### How it differs from [Mainframer](https://github.com/gojuno/mainframer)
+
+Mirakle is designed specially for Gradle build system. It works as seamless as possible. Once plugin installed, you workflow will not be different at all.
+
+(It's a good thing to prank your colleague. Imagine his surprise when one day he get several times faster build time.)
+
 
 ## Setup
 * Put this into `USER_HOME/.gradle/init.d/mirakle.gradle`
@@ -65,6 +76,7 @@ mirakle {
     sshArgs += ["-p 22"]
 }
 ```
+## [Contributing](docs/CONTRIBUTING.md)
 
 ## License
 ```
