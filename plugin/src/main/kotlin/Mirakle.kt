@@ -120,35 +120,34 @@ open class MirakleExtension {
     var host: String? = null
     var remoteFolder: String = "mirakle"
 
-    var excludeLocal = listOf(
-            ".gradle",
-            ".idea",
-            "**/.git/",
-            "**/local.properties",
+    var excludeLocal = setOf(
             "**/build"
     )
 
-    var excludeRemote = listOf(
-            ".gradle",
-            ".idea",
-            "**/.git/",
-            "**/local.properties",
+    var excludeRemote = setOf(
             "**/src/"
     )
 
-    var rsyncToRemoteArgs = listOf(
+    var excludeCommon = setOf(
+            ".gradle",
+            ".idea",
+            "**/.git/",
+            "**/local.properties"
+    )
+
+    var rsyncToRemoteArgs = setOf(
             "--archive",
             "--delete"
     )
-        get() = field.plus(excludeLocal.map { "--exclude=$it" })
+        get() = field.plus(excludeLocal.plus(excludeCommon).map { "--exclude=$it" })
 
-    var rsyncFromRemoteArgs = listOf(
+    var rsyncFromRemoteArgs = setOf(
             "--archive",
             "--delete"
     )
-        get() = field.plus(excludeRemote.map { "--exclude=$it" })
+        get() = field.plus(excludeRemote.plus(excludeCommon).map { "--exclude=$it" })
 
-    var sshArgs = emptyList<String>()
+    var sshArgs = emptySet<String>()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {

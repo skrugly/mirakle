@@ -71,6 +71,7 @@ mirakle {
 
     excludeLocal += ["foo"]
     excludeRemote += ["bar"]
+    excludeCommon += ["foobar"]
 
     rsyncFromRemoteArgs += ["--stats", "-h"]
     rsyncToRemoteArgs += ["--stats", "-h"]
@@ -105,6 +106,7 @@ afterEvaluate {
 
     //passed exclude
     assert uploadToRemote.args.contains("--exclude=foo")
+    assert uploadToRemote.args.contains("--exclude=foobar")
 
     ///
 
@@ -148,6 +150,7 @@ afterEvaluate {
 
     //passed exclude
     assert downloadFromRemote.args.contains("--exclude=bar")
+    assert downloadFromRemote.args.contains("--exclude=foobar")
 }
 """
 
