@@ -35,13 +35,16 @@ class Mirakle : Plugin<Gradle> {
             setTaskNames(listOf("mirakle"))
             setExcludedTaskNames(emptyList())
             useEmptySettings()
-
-            //a way to make Gradle not evaluate project's default build.gradle file on local machine
-            buildFile = File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { it.createNewFile() }
+            buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
+                    ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
+                    File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
+                        stub.createNewFile()
+                        gradle.rootProject { it.afterEvaluate { stub.delete() } }
+                    }
         }
 
         gradle.rootProject { project ->
-            project.beforeEvaluate {
+            project.afterEvaluate {
                 val config = project.extensions.getByType(MirakleExtension::class.java)
 
                 if (config.host == null) {
@@ -58,7 +61,7 @@ class Mirakle : Plugin<Gradle> {
                                 rootDir,
                                 "${config.host}:${config.remoteFolder}"
                         )
-
+                        args("--exclude=mirakle.gradle")
                         args(config.rsyncToRemoteArgs)
                     }
 
@@ -94,22 +97,16 @@ class Mirakle : Plugin<Gradle> {
                                 "${config.host}:${config.remoteFolder}/${project.name}/",
                                 "./"
                         )
+                        args("--exclude=mirakle.gradle")
                         args(config.rsyncFromRemoteArgs)
                     }.mustRunAfter(execute)
 
                     val mirakle = task("mirakle").dependsOn(upload, execute, download)
 
-                    upload.doFirst {
-                        if (gradle.startParameter.buildFile!!.name == "mirakle_build_file_stub") {
-                            gradle.startParameter.buildFile!!.delete()
-                        }
-                    }
-
                     mirakle.doLast {
                         execute as Exec
                         execute.execResult.assertNormalExitValue()
                     }
-
 
                     gradle.logTasks(upload, execute, download)
                     gradle.logBuild(startTime)

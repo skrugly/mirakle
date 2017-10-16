@@ -30,6 +30,20 @@ rootProject {
 }
 """
 
+val MIRAKLE_INIT_WITHOUT_CONFIG = """
+initscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.instamotor:mirakle:${BuildConfig.VERSION}"
+    }
+}
+
+apply plugin: Mirakle
+"""
+
 val MIRAKLE_INIT_ASSERT_EXEC_ARGS = fun(remoteFolder: String) = """
 initscript {
     repositories {
@@ -44,88 +58,96 @@ initscript {
 apply plugin: Mirakle
 
 rootProject {
-    mirakle {
-        host "localhost"
-        remoteFolder "$remoteFolder/.mirakle"
+    ${ASSERT_EXEC_ARGS(remoteFolder)}
+}
+"""
 
-        excludeLocal += ["foo"]
-        excludeRemote += ["bar"]
+val MIRAKLE_GRADLE_ASSERT_EXEC_ARGS = fun(remoteFolder: String) = ASSERT_EXEC_ARGS(remoteFolder)
 
-        rsyncFromRemoteArgs += ["--stats", "-h"]
-        rsyncToRemoteArgs += ["--stats", "-h"]
+val ASSERT_EXEC_ARGS = fun(remoteFolder: String) = """
+mirakle {
+    host "localhost"
+    remoteFolder "$remoteFolder/.mirakle"
 
-        sshArgs += ["-p 22"]
-    }
+    excludeLocal += ["foo"]
+    excludeRemote += ["bar"]
 
-    afterEvaluate {
-        def uploadToRemote = getTasksByName("uploadToRemote", false)[0] as Exec
+    rsyncFromRemoteArgs += ["--stats", "-h"]
+    rsyncToRemoteArgs += ["--stats", "-h"]
 
-        //contract
-        assert uploadToRemote.commandLine[0] == "rsync"
-        assert uploadToRemote.args.contains("--rsh=ssh")
-        assert uploadToRemote.args.contains(rootDir.path)
-        assert uploadToRemote.args.contains("localhost:$remoteFolder/.mirakle")
+    sshArgs += ["-p 22"]
+}
 
-        //default args
-        assert uploadToRemote.args.contains("--archive")
-        assert uploadToRemote.args.contains("--delete")
+afterEvaluate {
+    def uploadToRemote = getTasksByName("uploadToRemote", false)[0] as Exec
 
-        //passed args
-        assert uploadToRemote.args.contains("--stats")
-        assert uploadToRemote.args.contains("-h")
+    //contract
+    assert uploadToRemote.commandLine[0] == "rsync"
+    assert uploadToRemote.args.contains("--rsh=ssh")
+    assert uploadToRemote.args.contains(rootDir.path)
+    assert uploadToRemote.args.contains("localhost:$remoteFolder/.mirakle")
+    assert uploadToRemote.args.contains("--exclude=mirakle.gradle")
 
-        //default exclude
-        assert uploadToRemote.args.contains("--exclude=.gradle")
-        assert uploadToRemote.args.contains("--exclude=.idea")
-        assert uploadToRemote.args.contains("--exclude=**/.git/")
-        assert uploadToRemote.args.contains("--exclude=**/local.properties")
-        assert uploadToRemote.args.contains("--exclude=**/build")
+    //default args
+    assert uploadToRemote.args.contains("--archive")
+    assert uploadToRemote.args.contains("--delete")
 
-        //passed exclude
-        assert uploadToRemote.args.contains("--exclude=foo")
+    //passed args
+    assert uploadToRemote.args.contains("--stats")
+    assert uploadToRemote.args.contains("-h")
 
-        ///
+    //default exclude
+    assert uploadToRemote.args.contains("--exclude=.gradle")
+    assert uploadToRemote.args.contains("--exclude=.idea")
+    assert uploadToRemote.args.contains("--exclude=**/.git/")
+    assert uploadToRemote.args.contains("--exclude=**/local.properties")
+    assert uploadToRemote.args.contains("--exclude=**/build")
 
-        def executeOnRemote = getTasksByName("executeOnRemote", false)[0] as Exec
+    //passed exclude
+    assert uploadToRemote.args.contains("--exclude=foo")
 
-        //contract
-        assert executeOnRemote.commandLine[0] == "ssh"
-        assert executeOnRemote.args.contains("localhost")
-        assert executeOnRemote.args.contains("$remoteFolder/.mirakle/" + name + "/gradlew")
-        assert executeOnRemote.args.contains("-Pmirakle.build.on.remote=true")
-        assert executeOnRemote.args.contains("-p $remoteFolder/.mirakle/" + name)
+    ///
 
-        //passed args
-        assert executeOnRemote.args.contains("-p 22")
+    def executeOnRemote = getTasksByName("executeOnRemote", false)[0] as Exec
 
-        ///
+    //contract
+    assert executeOnRemote.commandLine[0] == "ssh"
+    assert executeOnRemote.args.contains("localhost")
+    assert executeOnRemote.args.contains("$remoteFolder/.mirakle/" + name + "/gradlew")
+    assert executeOnRemote.args.contains("-Pmirakle.build.on.remote=true")
+    assert executeOnRemote.args.contains("-p $remoteFolder/.mirakle/" + name)
 
-        def downloadFromRemote = getTasksByName("downloadFromRemote", false)[0] as Exec
+    //passed args
+    assert executeOnRemote.args.contains("-p 22")
 
-        //contract
-        assert downloadFromRemote.commandLine[0] == "rsync"
-        assert downloadFromRemote.args.contains("--rsh=ssh")
-        assert downloadFromRemote.args.contains("localhost:$remoteFolder/.mirakle/" + name + "/")
-        assert downloadFromRemote.args.contains("./")
+    ///
 
-        //default args
-        assert downloadFromRemote.args.contains("--archive")
-        assert downloadFromRemote.args.contains("--delete")
+    def downloadFromRemote = getTasksByName("downloadFromRemote", false)[0] as Exec
 
-        //passed args
-        assert downloadFromRemote.args.contains("--stats")
-        assert downloadFromRemote.args.contains("-h")
+    //contract
+    assert downloadFromRemote.commandLine[0] == "rsync"
+    assert downloadFromRemote.args.contains("--rsh=ssh")
+    assert downloadFromRemote.args.contains("localhost:$remoteFolder/.mirakle/" + name + "/")
+    assert downloadFromRemote.args.contains("./")
+    assert downloadFromRemote.args.contains("--exclude=mirakle.gradle")
 
-        //default exclude
-        assert downloadFromRemote.args.contains("--exclude=.gradle")
-        assert downloadFromRemote.args.contains("--exclude=.idea")
-        assert downloadFromRemote.args.contains("--exclude=**/.git/")
-        assert downloadFromRemote.args.contains("--exclude=**/local.properties")
-        assert downloadFromRemote.args.contains("--exclude=**/src/")
+    //default args
+    assert downloadFromRemote.args.contains("--archive")
+    assert downloadFromRemote.args.contains("--delete")
 
-        //passed exclude
-        assert downloadFromRemote.args.contains("--exclude=bar")
-    }
+    //passed args
+    assert downloadFromRemote.args.contains("--stats")
+    assert downloadFromRemote.args.contains("-h")
+
+    //default exclude
+    assert downloadFromRemote.args.contains("--exclude=.gradle")
+    assert downloadFromRemote.args.contains("--exclude=.idea")
+    assert downloadFromRemote.args.contains("--exclude=**/.git/")
+    assert downloadFromRemote.args.contains("--exclude=**/local.properties")
+    assert downloadFromRemote.args.contains("--exclude=**/src/")
+
+    //passed exclude
+    assert downloadFromRemote.args.contains("--exclude=bar")
 }
 """
 
