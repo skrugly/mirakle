@@ -1,0 +1,3 @@
+remote_machine=sample@remotebuildmachine
+local_compression_level=2
+remote_compression_level=3

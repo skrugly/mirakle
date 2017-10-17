@@ -15,6 +15,7 @@ import org.gradle.api.tasks.Exec
 import java.io.File
 import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.util.Properties
 
 class Mirakle : Plugin<Gradle> {
     override fun apply(gradle: Gradle) {
@@ -45,11 +46,11 @@ class Mirakle : Plugin<Gradle> {
 
         gradle.rootProject { project ->
             project.afterEvaluate {
-                val config = project.extensions.getByType(MirakleExtension::class.java)
+                val config = getMainframerConfigOrNull(project.rootDir)?.also {
+                    println("Mainframer config is applied, Mirakle config is ignored.")
+                } ?: project.extensions.getByType(MirakleExtension::class.java)
 
-                if (config.host == null) {
-                    throw MirakleException("Mirakle host is not defined.")
-                }
+                if (config.host == null) throw MirakleException("Mirakle host is not defined.")
 
                 println("Here's Mirakle ${BuildConfig.VERSION}. All tasks will be executed on ${config.host}.")
 
@@ -213,3 +214,43 @@ fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String
 }
 
 const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
+
+fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
+    val mainframerDir = File(projectDir, ".mainframer")
+    return if (mainframerDir.exists()) {
+        MirakleExtension().apply {
+            val config = mainframerDir.listFiles().firstOrNull { it.name == "config" }
+            val commonIgnore = mainframerDir.listFiles().firstOrNull { it.name == "ignore" }
+            val localIgnore = mainframerDir.listFiles().firstOrNull { it.name == "localignore" }
+            val remoteIgnore = mainframerDir.listFiles().firstOrNull { it.name == "remoteignore" }
+
+            if (config == null) throw MirakleException("Mainframer folder is detected but config is missed.")
+
+            remoteFolder = "~/mainframer"
+            excludeCommon = emptySet()
+            excludeLocal = emptySet()
+            excludeRemote = emptySet()
+
+            Properties().apply {
+                load(config.inputStream())
+
+                host = getProperty("remote_machine")
+                rsyncToRemoteArgs += "--compress-level=${getProperty("local_compression_level") ?: "1"}"
+                rsyncFromRemoteArgs += "--compress-level=${getProperty("remote_compression_level") ?: "1"}"
+            }
+
+            if (commonIgnore != null && commonIgnore.exists()) {
+                rsyncToRemoteArgs += "--exclude-from=${commonIgnore.path}"
+                rsyncFromRemoteArgs += "--exclude-from=${commonIgnore.path}"
+            }
+
+            if (localIgnore != null && localIgnore.exists()) {
+                rsyncToRemoteArgs += "--exclude-from=${localIgnore.path}"
+            }
+
+            if (remoteIgnore != null && remoteIgnore.exists()) {
+                rsyncFromRemoteArgs += "--exclude-from=${remoteIgnore.path}"
+            }
+        }
+    } else null
+}
