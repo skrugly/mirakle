@@ -62,6 +62,27 @@ rootProject {
 }
 """
 
+val MIRAKLE_INIT_WITH_FALLBACK_AND_UNRESOLVABLE_HOST = """
+initscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.instamotor:mirakle:${BuildConfig.VERSION}"
+    }
+}
+
+apply plugin: Mirakle
+
+rootProject {
+    mirakle {
+        host "affsfnjkdasfnajdkfhajlkdfhljkdfhl"
+        fallback true
+    }
+}
+"""
+
 val MIRAKLE_GRADLE_ASSERT_EXEC_ARGS = fun(remoteFolder: String) = ASSERT_EXEC_ARGS(remoteFolder)
 
 val ASSERT_EXEC_ARGS = fun(remoteFolder: String) = """
@@ -265,6 +286,14 @@ fun TestResult.assertOutputContains(text: String) {
 
 fun TestResult.assertTaskSucceed(taskName: String) {
     assertTrue(buildResult!!.task(":$taskName")?.outcome == TaskOutcome.SUCCESS)
+}
+
+fun TestResult.assertTaskFailed(taskName: String) {
+    assertTrue(buildResult!!.task(":$taskName")?.outcome == TaskOutcome.FAILED)
+}
+
+fun TestResult.assertTaskSkipped(taskName: String) {
+    assertTrue(buildResult!!.task(":$taskName")?.outcome == TaskOutcome.SKIPPED)
 }
 
 fun TestResult.assertNoTask(taskName: String) {

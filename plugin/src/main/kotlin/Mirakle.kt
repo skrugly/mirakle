@@ -7,11 +7,13 @@ import com.instamotor.BuildConfig
 import org.apache.commons.io.output.WriterOutputStream
 import org.gradle.StartParameter
 import org.gradle.api.Plugin
+import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
 import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.api.tasks.Exec
+import org.gradle.tooling.GradleConnector
 import java.io.File
 import java.io.OutputStream
 import java.io.OutputStreamWriter
@@ -23,6 +25,7 @@ class Mirakle : Plugin<Gradle> {
 
         if (gradle.startParameter.taskNames.isEmpty()) return
         if (gradle.startParameter.projectProperties.containsKey(BUILD_ON_REMOTE)) return
+        if (gradle.startParameter.projectProperties.containsKey(FALLBACK)) return
         if (gradle.startParameter.excludedTaskNames.remove("mirakle")) return
         if (gradle.startParameter.isDryRun) return
 
@@ -30,15 +33,15 @@ class Mirakle : Plugin<Gradle> {
 
         gradle.assertNonSupportedFeatures()
 
-        val startParamsCopy = gradle.startParameter.newInstance()
+        val originalStartParams = gradle.startParameter.newInstance()
 
         gradle.startParameter.apply {
             setTaskNames(listOf("mirakle"))
             setExcludedTaskNames(emptyList())
             useEmptySettings()
-            buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
+            buildFile = File(originalStartParams.currentDir, "mirakle.gradle").takeIf(File::exists)
                     ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
-                    File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
+                    File(originalStartParams.currentDir, "mirakle_build_file_stub").also { stub ->
                         stub.createNewFile()
                         gradle.rootProject { it.afterEvaluate { stub.delete() } }
                     }
@@ -75,7 +78,7 @@ class Mirakle : Plugin<Gradle> {
                             "-P$BUILD_ON_REMOTE=true",
                             "-p ${config.remoteFolder}/${project.name}"
                     )
-                    args(startParamsToArgs(startParamsCopy))
+                    args(startParamsToArgs(originalStartParams))
 
                     isIgnoreExitValue = true
 
@@ -105,9 +108,39 @@ class Mirakle : Plugin<Gradle> {
 
                 val mirakle = project.task("mirakle").dependsOn(upload, execute, download)
 
-                mirakle.doLast {
-                    execute as Exec
-                    execute.execResult.assertNormalExitValue()
+                if (!config.fallback) {
+                    mirakle.doLast {
+                        (execute as Exec).execResult.assertNormalExitValue()
+                    }
+                } else {
+                    val fallback = project.task<AbstractTask>("fallback") {
+                        onlyIf { upload.execResult.exitValue != 0 }
+
+                        doFirst {
+                            println("Upload to remote failed. Continuing with fallback")
+
+                            val connection = GradleConnector.newConnector()
+                                    .forProjectDirectory(gradle.rootProject.projectDir)
+                                    .connect()
+
+                            try {
+                                connection.newBuild()
+                                        .withArguments(startParamsToArgs(originalStartParams).plus("-P$FALLBACK=true"))
+                                        .setStandardInput(upload.standardInput)
+                                        .setStandardOutput(upload.standardOutput)
+                                        .setStandardError(upload.errorOutput)
+                                        .run()
+                            } finally {
+                                connection.close()
+                            }
+                        }
+                    }
+
+                    upload.isIgnoreExitValue = true
+                    upload.finalizedBy(fallback)
+
+                    execute.onlyIf { upload.execResult.exitValue == 0 }
+                    download.onlyIf { upload.execResult.exitValue == 0 }
                 }
 
                 gradle.logTasks(upload, execute, download)
@@ -119,6 +152,7 @@ class Mirakle : Plugin<Gradle> {
 
 open class MirakleExtension {
     var host: String? = null
+
     var remoteFolder: String = "mirakle"
 
     var excludeLocal = setOf(
@@ -149,6 +183,8 @@ open class MirakleExtension {
         get() = field.plus(excludeRemote.plus(excludeCommon).map { "--exclude=$it" })
 
     var sshArgs = emptySet<String>()
+
+    var fallback = false
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
@@ -196,7 +232,7 @@ val showStacktraceToOption = listOf(
 
 val consoleOutputToOption = listOf(
         ConsoleOutput.Plain to "--console plain",
-        ConsoleOutput.Auto to "--console auto",
+        //ConsoleOutput.Auto to "--console auto", //default, no need to pass
         ConsoleOutput.Rich to "--console rich"
 )
 
@@ -212,8 +248,6 @@ fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String
     val modifyingWriter = ModifyingWriter(OutputStreamWriter(target), modifier)
     return WriterOutputStream(modifyingWriter)
 }
-
-const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
 
 fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
     val mainframerDir = File(projectDir, ".mainframer")
@@ -254,3 +288,6 @@ fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
         }
     } else null
 }
+
+const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
+const val FALLBACK = "mirakle.build.fallback"
