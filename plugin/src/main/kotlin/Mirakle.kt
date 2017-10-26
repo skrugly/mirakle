@@ -17,6 +17,7 @@ import org.gradle.tooling.GradleConnector
 import java.io.File
 import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.nio.file.Files
 import java.util.Properties
 
 class Mirakle : Plugin<Gradle> {
@@ -92,7 +93,7 @@ class Mirakle : Plugin<Gradle> {
                             "${config.remoteFolder}/${project.name}",
                             project.rootDir.path
                     )
-                }.mustRunAfter(upload)
+                }.mustRunAfter(upload) as Exec
 
                 val download = project.task<Exec>("downloadFromRemote") {
                     setCommandLine("rsync")
@@ -104,13 +105,13 @@ class Mirakle : Plugin<Gradle> {
                             "--exclude=mirakle.gradle"
                     )
                     args(config.rsyncFromRemoteArgs)
-                }.mustRunAfter(execute)
+                }.mustRunAfter(execute) as Exec
 
                 val mirakle = project.task("mirakle").dependsOn(upload, execute, download)
 
                 if (!config.fallback) {
                     mirakle.doLast {
-                        (execute as Exec).execResult.assertNormalExitValue()
+                        execute.execResult.assertNormalExitValue()
                     }
                 } else {
                     val fallback = project.task<AbstractTask>("fallback") {
@@ -142,6 +143,8 @@ class Mirakle : Plugin<Gradle> {
                     execute.onlyIf { upload.execResult.exitValue == 0 }
                     download.onlyIf { upload.execResult.exitValue == 0 }
                 }
+
+                gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
                 gradle.logBuild(startTime)
@@ -291,3 +294,46 @@ fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
 
 const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
 const val FALLBACK = "mirakle.build.fallback"
+
+fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
+    if (startParameter.projectProperties.containsKey("android.advanced.profiling.transforms")) {
+        println("Android Studio advanced profilling enabled. Profiler files will be uploaded to remote project dir.")
+
+        val studioProfilerJar = File(startParameter.projectProperties["android.advanced.profiling.transforms"])
+        val studioProfilerProp = File(startParameter.systemPropertiesArgs["android.profiler.properties"])
+
+        val jarInRootProject = gradle.rootProject.file(studioProfilerJar.name)
+        val propInRootProject = gradle.rootProject.file(studioProfilerProp.name)
+
+        if (jarInRootProject.exists()) jarInRootProject.delete()
+        if (propInRootProject.exists()) propInRootProject.delete()
+
+        upload.doFirst {
+            Files.copy(studioProfilerJar.toPath(), jarInRootProject.toPath())
+            Files.copy(studioProfilerProp.toPath(), propInRootProject.toPath())
+        }
+
+        upload.doLast {
+            jarInRootProject.delete()
+            propInRootProject.delete()
+        }
+
+        execute.doFirst {
+            val profilerJarPathArg = "android.advanced.profiling.transforms=${studioProfilerJar.toPath()}"
+            val profilerPropPathArg = "android.profiler.properties=${studioProfilerProp.toPath()}"
+
+            val rootProfilerJarArg = "android.advanced.profiling.transforms=${config.remoteFolder}/${gradle.rootProject.name}/${jarInRootProject.name}"
+            val rootProfilerPropArg = "android.profiler.properties=${config.remoteFolder}/${gradle.rootProject.name}/${propInRootProject.name}"
+
+            execute.args = execute.args.apply {
+                set(execute.args.indexOf(profilerJarPathArg), rootProfilerJarArg)
+                set(execute.args.indexOf(profilerPropPathArg), rootProfilerPropArg)
+            }
+        }
+
+        download.doFirst {
+            download.args("--exclude=${jarInRootProject.name}")
+            download.args("--exclude=${propInRootProject.name}")
+        }
+    }
+}
