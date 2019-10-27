@@ -2,6 +2,7 @@ sudo: required
 language: java
 jdk:
   - oraclejdk8
+dist: trusty
 before_install:
   - chmod +x .travis-ssh.sh
 script:
