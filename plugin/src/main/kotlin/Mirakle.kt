@@ -373,9 +373,9 @@ fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, uploa
             val rootProfilerJarArg = "android.advanced.profiling.transforms=${config.remoteFolder}/${gradle.rootProject.name}/${jarInRootProject.name}"
             val rootProfilerPropArg = "android.profiler.properties=${config.remoteFolder}/${gradle.rootProject.name}/${propInRootProject.name}"
 
-            execute.args = execute.args.apply {
-                set(execute.args.indexOf(profilerJarPathArg), rootProfilerJarArg)
-                set(execute.args.indexOf(profilerPropPathArg), rootProfilerPropArg)
+            execute.args = execute.args!!.apply {
+                set(indexOf(profilerJarPathArg), rootProfilerJarArg)
+                set(indexOf(profilerPropPathArg), rootProfilerPropArg)
             }
         }
 
