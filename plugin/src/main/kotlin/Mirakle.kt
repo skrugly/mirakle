@@ -258,13 +258,11 @@ val booleanParamsToOption = listOf(
         StartParameter::isRefreshDependencies to "--refresh-dependencies",
         StartParameter::isContinueOnFailure to "--continue",
         StartParameter::isOffline to "--offline",
-        StartParameter::isRecompileScripts to "--recompile-scripts",
         StartParameter::isParallelProjectExecutionEnabled to "--parallel",
         StartParameter::isConfigureOnDemand to "--configure-on-demand"
 )
 
 val negativeBooleanParamsToOption = listOf(
-        StartParameter::isSearchUpwards to "--no-search-upward",
         StartParameter::isBuildProjectDependencies to "--no-rebuild"
 )
 
