@@ -6,7 +6,7 @@ import org.jetbrains.spek.api.dsl.*
 import java.io.*
 
 object StartParametersTest : Spek({
-    BuildConfig.SUPPORTED_GRADLE_VERSIONS.forEach { gradleVersion ->
+    BuildConfig.TESTED_GRADLE_VERSIONS.forEach { gradleVersion ->
         describe("project with gradle version $gradleVersion") {
             val folder by temporaryFolder()
 

@@ -7,7 +7,7 @@ import java.io.FileWriter
 import java.io.PrintWriter
 
 object FallbackTest : Spek({
-    BuildConfig.SUPPORTED_GRADLE_VERSIONS.forEach { gradleVersion ->
+    BuildConfig.TESTED_GRADLE_VERSIONS.forEach { gradleVersion ->
         describe("project with gradle version $gradleVersion") {
             val folder by temporaryFolder()
 
