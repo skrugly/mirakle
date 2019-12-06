@@ -8,13 +8,18 @@ import kotlin.test.assertTrue
 
 object MainframerConfigTest: Spek({
     describe("mainframer config") {
+        val mirakleConfig = MirakleExtension().apply {
+            fallback = true
+            downloadInParallel = true
+            downloadInterval = 123
+        }
+
         val mainframerFolder = javaClass.classLoader.getResource(".mainframer").file
-        val config = getMainframerConfigOrNull(File(mainframerFolder.replace("/.mainframer", "")))
+        val config = getMainframerConfigOrNull(File(mainframerFolder.replace("/.mainframer", "")), mirakleConfig)
 
         it("should be parsed correctly") {
             config.apply {
                 assertNotNull(config)
-                config!!
 
                 assertEquals("sample@remotebuildmachine", config.host)
                 assertEquals("~/mainframer", config.remoteFolder)
@@ -39,6 +44,10 @@ object MainframerConfigTest: Spek({
                         "--exclude-from=$mainframerFolder/ignore",
                         "--exclude-from=$mainframerFolder/remoteignore"
                 ), config.rsyncFromRemoteArgs)
+
+                assertTrue(config.fallback)
+                assertTrue(config.downloadInParallel)
+                assertEquals(123, config.downloadInterval)
             }
         }
     }

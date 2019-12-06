@@ -60,9 +60,13 @@ class Mirakle : Plugin<Gradle> {
 
         gradle.rootProject { project ->
             project.afterEvaluate {
-                val config = getMainframerConfigOrNull(project.rootDir)?.also {
-                    println("Mainframer config is applied, Mirakle config is ignored.")
-                } ?: project.extensions.getByType(MirakleExtension::class.java)
+                val config = kotlin.run {
+                    val mirakleConfig = project.extensions.getByType(MirakleExtension::class.java)
+                    
+                    getMainframerConfigOrNull(project.rootDir, mirakleConfig)?.also {
+                        println("Mainframer config is applied, Mirakle config is ignored.")
+                    } ?: mirakleConfig
+                }
 
                 if (config.host == null) throw MirakleException("Mirakle host is not defined.")
 
@@ -297,9 +301,9 @@ fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String
     return WriterOutputStream(modifyingWriter)
 }
 
-fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
+fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension): MirakleExtension? {
     val mainframerDir = File(projectDir, ".mainframer")
-    return if (mainframerDir.exists()) {
+    return mainframerDir.takeIf(File::exists)?.let {
         MirakleExtension().apply {
             val config = mainframerDir.listFiles().firstOrNull { it.name == "config" }
             val commonIgnore = mainframerDir.listFiles().firstOrNull { it.name == "ignore" }
@@ -333,8 +337,14 @@ fun getMainframerConfigOrNull(projectDir: File): MirakleExtension? {
             if (remoteIgnore != null && remoteIgnore.exists()) {
                 rsyncFromRemoteArgs += "--exclude-from=${remoteIgnore.path}"
             }
+
+            // Mainframer doesn't have fallback and parallel download features implemented yet
+            // Use Mirakle's parameters instead
+            fallback = mirakleConfig.fallback
+            downloadInParallel = mirakleConfig.downloadInParallel
+            downloadInterval = mirakleConfig.downloadInterval
         }
-    } else null
+    }
 }
 
 const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
