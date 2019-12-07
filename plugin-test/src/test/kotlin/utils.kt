@@ -263,6 +263,12 @@ val ASSERT_CONTAINS_TASKS = fun(tasks: List<String>) =
             throw Exception("Expected tasks $tasks, but was = " + gradle.startParameter.taskNames)
         gradle.startParameter.setTaskNames(emptyList()) // since this tasks are not exist
         """
+val ASSERT_NOT_CONTAINS_TASK = fun(task: String) =
+        """
+        if(gradle.startParameter.taskNames.contains("$task"))
+            throw Exception("Expected tasks not contain $task, but was = " + gradle.startParameter.taskNames)
+        gradle.startParameter.setTaskNames(emptyList()) // since this tasks are not exist
+        """
 
 val ASSERT_CONTAINS_EXCLUDED_TASKS = fun(tasks: List<String>) =
         """

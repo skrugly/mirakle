@@ -139,6 +139,18 @@ object StartParametersTest : Spek({
                 }
             }
 
+            on("passing mirakle task") {
+                val tasks = listOf("task1", "mirakle")
+
+                buildFileWriter().use {
+                    it.append(ASSERT_NOT_CONTAINS_TASK("mirakle"))
+                }
+
+                it("should not receive mirakle task on remote machine") {
+                    gradleRunner.addArgs(tasks).build()
+                }
+            }
+
             on("passing excluded tasks") {
                 val tasks = listOf("task1", "task2", "task3")
 

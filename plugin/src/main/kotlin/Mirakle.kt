@@ -243,7 +243,7 @@ open class MirakleExtension {
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
     emptyList<String>()
-            .plus(taskNames)
+            .plus(taskNames.minus("mirakle"))
             .plus(excludedTaskNames.map { "--exclude-task $it" })
             .plus(buildFile?.let { "-b $it" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
