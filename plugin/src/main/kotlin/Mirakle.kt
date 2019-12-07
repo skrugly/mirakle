@@ -204,7 +204,7 @@ class Mirakle : Plugin<Gradle> {
 open class MirakleExtension {
     var host: String? = null
 
-    var remoteFolder: String = "mirakle"
+    var remoteFolder: String = "~/mirakle"
 
     var excludeLocal = setOf(
             "**/build"
@@ -292,9 +292,7 @@ val consoleOutputToOption = listOf(
 //to let IDE and other tools properly parse the output, mirakle need to replace remote dir by local one
 fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String): OutputStream {
     val tokenList = listOf(
-            Token("1", "\\/.*?\\/$remoteDir", localDir)
-            //Token("2", "(?<=\\n)BUILD FAILED", "REMOTE BUILD FAILED"),
-            //Token("3", "(?<=\\n)BUILD SUCCESSFUL", "REMOTE BUILD SUCCESSFUL")
+            Token("1", "\\/.*?\\/${remoteDir.replace("~/", "")}", localDir)
     )
     val modifier = RegexModifier(TokensMatcher(tokenList), TokenProcessor(tokenList), 0, 1)
     val modifyingWriter = ModifyingWriter(OutputStreamWriter(target), modifier)
