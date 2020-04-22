@@ -127,8 +127,8 @@ class Mirakle : Plugin<Gradle> {
                     val downloadInParallel = project.task<AbstractTask>("downloadInParallel") {
                         doFirst {
                             val downloadExecAction = services.get(ExecActionFactory::class.java).newExecAction().apply {
-                                setCommandLine(download.commandLine)
-                                setArgs(download.args)
+                                commandLine = download.commandLine
+                                args = download.args
                                 standardOutput = download.standardOutput
                                 standardInput = download.standardInput
                             }
@@ -145,7 +145,7 @@ class Mirakle : Plugin<Gradle> {
                         }
 
                         onlyIf {
-                            config.downloadInParallel && upload.execResult.exitValue == 0 && !execute.didWork
+                            config.downloadInParallel && upload.execResult!!.exitValue == 0 && !execute.didWork
                         }
                     }
 
@@ -159,11 +159,11 @@ class Mirakle : Plugin<Gradle> {
 
                 if (!config.fallback) {
                     mirakle.doLast {
-                        execute.execResult.assertNormalExitValue()
+                        execute.execResult!!.assertNormalExitValue()
                     }
                 } else {
                     val fallback = project.task<AbstractTask>("fallback") {
-                        onlyIf { upload.execResult.exitValue != 0 }
+                        onlyIf { upload.execResult!!.exitValue != 0 }
 
                         doFirst {
                             println("Upload to remote failed. Continuing with fallback.")
@@ -188,8 +188,8 @@ class Mirakle : Plugin<Gradle> {
                     upload.isIgnoreExitValue = true
                     upload.finalizedBy(fallback)
 
-                    execute.onlyIf { upload.execResult.exitValue == 0 }
-                    download.onlyIf { upload.execResult.exitValue == 0 }
+                    execute.onlyIf { upload.execResult!!.exitValue == 0 }
+                    download.onlyIf { upload.execResult!!.exitValue == 0 }
                 }
 
                 gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
