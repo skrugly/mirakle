@@ -1,4 +1,5 @@
 import groovy.lang.Closure
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
 import org.gradle.api.Project
@@ -62,7 +63,7 @@ fun prettyTime(timeInMs: Long): String {
 class MirakleException(message: String) : RuntimeException(message)
 
 inline fun <reified T : Task> Project.task(name: String, noinline configuration: T.() -> Unit) =
-        tasks.create(name, T::class.java, configuration)!!
+        tasks.create(name, T::class.java, configuration)
 
 
 //void buildFinished(Action<? super BuildResult> action) is available since 3.4
@@ -88,3 +89,14 @@ val Task.services: ServiceRegistry get() {
     field.isAccessible = true
     return field.get(this) as ServiceRegistry
 }
+
+/*
+* On Windows rsync is used only under Cygwin environment
+* and classical Windows path "C:\" must be replaced by "/cygdrive/c/"
+* */
+fun fixDirForRsync(dir: String) =
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            val windowsDisk = dir.first().toLowerCase()
+            val path = dir.substringAfter(":\\")
+            "/cygdrive/$windowsDisk/$path"
+        } else dir
