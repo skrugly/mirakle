@@ -92,11 +92,11 @@ val Task.services: ServiceRegistry get() {
 
 /*
 * On Windows rsync is used only under Cygwin environment
-* and classical Windows path "C:\" must be replaced by "/cygdrive/c/"
+* and classical Windows path "C:\Users" must be replaced by "/cygdrive/c/Users"
 * */
 fun fixDirForRsync(dir: String) =
         if (Os.isFamily(Os.FAMILY_WINDOWS)) {
             val windowsDisk = dir.first().toLowerCase()
-            val path = dir.substringAfter(":\\")
+            val path = dir.substringAfter(":\\").replace('\\', '/')
             "/cygdrive/$windowsDisk/$path"
         } else dir
