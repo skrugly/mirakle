@@ -248,7 +248,7 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
             .plus(buildFile?.let { "-b $it" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
             .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
-            .plus(projectProperties.flatMap { (key, value) -> listOf("--project-prop", "$key=$value") })
+            .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "$key=$value") })
             .plus(systemPropertiesArgs.flatMap { (key, value) -> listOf("--system-prop", "$key=$value") })
             .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
             .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
@@ -268,6 +268,10 @@ val booleanParamsToOption = listOf(
 
 val negativeBooleanParamsToOption = listOf(
         StartParameter::isBuildProjectDependencies to "--no-rebuild"
+)
+
+val excludedProjectProperties = listOf(
+    "android.injected.attribution.file.location" // disable Android Studio Build Analyzer collection on remote machine
 )
 
 val logLevelToOption = listOf(
