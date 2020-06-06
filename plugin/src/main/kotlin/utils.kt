@@ -98,5 +98,5 @@ fun fixDirForRsync(dir: String) =
         if (Os.isFamily(Os.FAMILY_WINDOWS)) {
             val windowsDisk = dir.first().toLowerCase()
             val path = dir.substringAfter(":\\").replace('\\', '/')
-            "/cygdrive/$windowsDisk/$path"
+            "/$windowsDisk/$path"
         } else dir
