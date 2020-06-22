@@ -271,7 +271,8 @@ val negativeBooleanParamsToOption = listOf(
 )
 
 val excludedProjectProperties = listOf(
-        "android.injected.attribution.file.location" // disable Android Studio Build Analyzer collection on remote machine
+        "android.injected.attribution.file.location", // disable Android Studio Build Analyzer collection on remote machine
+        "android.injected.studio.version" // disable Android Studio version
 )
 
 val logLevelToOption = listOf(
