@@ -88,8 +88,3 @@ val Task.services: ServiceRegistry get() {
     field.isAccessible = true
     return field.get(this) as ServiceRegistry
 }
-
-/**
- * Escape spaces (handle path names containing spaces.
- */
-val Project.nameEscaped: String get() = name.replace(" ", "\\ ")
