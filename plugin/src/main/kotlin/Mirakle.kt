@@ -89,9 +89,9 @@ class Mirakle : Plugin<Gradle> {
                     args(config.sshArgs)
                     args(
                             config.host,
-                            "${config.remoteFolder}/${project.name}/gradlew",
+                            "${config.remoteFolder}/${project.nameEscaped}/gradlew",
                             "-P$BUILD_ON_REMOTE=true",
-                            "-p ${config.remoteFolder}/${project.name}"
+                            "-p ${config.remoteFolder}/${project.nameEscaped}"
                     )
                     args(startParamsToArgs(originalStartParams))
 
@@ -112,7 +112,7 @@ class Mirakle : Plugin<Gradle> {
                 val download = project.task<Exec>("downloadFromRemote") {
                     setCommandLine("rsync")
                     args(
-                            "${config.host}:${config.remoteFolder}/${project.name}/",
+                            "${config.host}:${config.remoteFolder}/${project.nameEscaped}/",
                             "./",
                             "--rsh",
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
