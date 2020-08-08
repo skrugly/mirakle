@@ -75,7 +75,7 @@ class Mirakle : Plugin<Gradle> {
                 val upload = project.task<Exec>("uploadToRemote") {
                     setCommandLine("rsync")
                     args(
-                            project.rootDir,
+                            fixPathForWindows(project.rootDir.toString()),
                             "${config.host}:${config.remoteFolder}",
                             "--rsh",
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
