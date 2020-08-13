@@ -127,8 +127,6 @@ rootProject {
 }
 """
 
-val MIRAKLE_GRADLE_ASSERT_EXEC_ARGS = fun(remoteFolder: String) = ASSERT_EXEC_ARGS(remoteFolder)
-
 val ASSERT_EXEC_ARGS = fun(remoteFolder: String) = """
 mirakle {
     host "localhost"
@@ -181,9 +179,9 @@ afterEvaluate {
     //contract
     assert executeOnRemote.commandLine[0] == "ssh"
     assert executeOnRemote.args.contains("localhost")
-    assert executeOnRemote.args.contains("$remoteFolder/.mirakle/" + name + "/gradlew")
+    assert executeOnRemote.args.contains("$remoteFolder/.mirakle/" + "\"" + name + "\"" + "/gradlew")
     assert executeOnRemote.args.contains("-Pmirakle.build.on.remote=true")
-    assert executeOnRemote.args.contains("-p $remoteFolder/.mirakle/" + name)
+    assert executeOnRemote.args.contains("-p $remoteFolder/.mirakle/" + "\"" + name + "\"")
 
     //passed args
     assert executeOnRemote.args.contains("-p 22")
@@ -196,7 +194,7 @@ afterEvaluate {
     assert downloadFromRemote.commandLine[0] == "rsync"
     assert downloadFromRemote.args.contains("--rsh")
     assert downloadFromRemote.args.contains("ssh -p 22")
-    assert downloadFromRemote.args.contains("localhost:$remoteFolder/.mirakle/" + name + "/")
+    assert downloadFromRemote.args.contains("localhost:$remoteFolder/.mirakle/" + "\"" + name + "\"" + "/")
     assert downloadFromRemote.args.contains("./")
     assert downloadFromRemote.args.contains("--exclude=mirakle.gradle")
 

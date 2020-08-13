@@ -63,7 +63,7 @@ object MirakleInitTest : Spek({
                             .let(::PrintWriter)
                             .use {
                                 it.append(PRINT_MESSAGE(uuid))
-                                it.appendln(MIRAKLE_GRADLE_ASSERT_EXEC_ARGS(folder.root.canonicalPath))
+                                it.appendln(ASSERT_EXEC_ARGS(folder.root.canonicalPath))
                             }
 
                 }
