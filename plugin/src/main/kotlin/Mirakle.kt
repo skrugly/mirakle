@@ -98,12 +98,12 @@ class Mirakle : Plugin<Gradle> {
                     isIgnoreExitValue = true
 
                     standardOutput = modifyOutputStream(
-                            standardOutput,
+                            standardOutput ?: System.out,
                             "${config.remoteFolder}/${project.name}",
                             project.rootDir.path
                     )
                     errorOutput = modifyOutputStream(
-                            errorOutput,
+                            errorOutput ?: System.err,
                             "${config.remoteFolder}/${project.name}",
                             project.rootDir.path
                     )
@@ -129,8 +129,8 @@ class Mirakle : Plugin<Gradle> {
                             val downloadExecAction = services.get(ExecActionFactory::class.java).newExecAction().apply {
                                 commandLine = download.commandLine
                                 args = download.args
-                                standardOutput = download.standardOutput
-                                standardInput = download.standardInput
+                                standardOutput = download.standardOutput ?: System.out
+                                standardInput = download.standardInput ?: System.`in`
                             }
 
                             //It's impossible to pass this as serializable params to worker
@@ -175,9 +175,9 @@ class Mirakle : Plugin<Gradle> {
                             try {
                                 connection.newBuild()
                                         .withArguments(startParamsToArgs(originalStartParams).plus("-P$FALLBACK=true"))
-                                        .setStandardInput(upload.standardInput)
-                                        .setStandardOutput(upload.standardOutput)
-                                        .setStandardError(upload.errorOutput)
+                                        .setStandardInput(upload.standardInput ?: System.`in`)
+                                        .setStandardOutput(upload.standardOutput ?: System.out)
+                                        .setStandardError(upload.errorOutput ?: System.err)
                                         .run()
                             } finally {
                                 connection.close()
