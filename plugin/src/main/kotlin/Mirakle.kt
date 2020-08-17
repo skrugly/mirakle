@@ -190,6 +190,12 @@ class Mirakle : Plugin<Gradle> {
 
                     execute.onlyIf { upload.execResult!!.exitValue == 0 }
                     download.onlyIf { upload.execResult!!.exitValue == 0 }
+
+                    mirakle.doLast {
+                        if (execute.didWork) {
+                            execute.execResult!!.assertNormalExitValue()
+                        }
+                    }
                 }
 
                 gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)

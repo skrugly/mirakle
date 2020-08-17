@@ -25,6 +25,7 @@ apply plugin: Mirakle
 rootProject {
     mirakle {
         host "localhost"
+        fallback false
         remoteFolder "$remoteFolder/mirakle"
     }
 }
