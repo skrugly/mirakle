@@ -2,6 +2,7 @@ import groovy.lang.Closure
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
+import org.gradle.api.GradleException
 import org.gradle.StartParameter
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -10,6 +11,8 @@ import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
+
+fun Gradle.logTasks(tasks: List<Task>) = logTasks(*tasks.toTypedArray())
 
 fun Gradle.logTasks(vararg task: Task) {
     task.forEach { targetTask ->
@@ -26,7 +29,8 @@ fun Gradle.logTasks(vararg task: Task) {
                 if (task == targetTask && task.didWork) {
                     val finishTime = System.currentTimeMillis()
                     buildFinished {
-                        println("Task ${task.name} took: ${prettyTime(finishTime - startTime)}")
+                        val taskName = if (task.isMirakleTask()) task.name else task.path.drop(1)
+                        println("Task $taskName took : ${prettyTime(finishTime - startTime)}")
                     }
                 }
             }
@@ -61,7 +65,7 @@ fun prettyTime(timeInMs: Long): String {
     return result.toString()
 }
 
-class MirakleException(message: String) : RuntimeException(message)
+class MirakleException(message: String? = null) : GradleException(message)
 
 inline fun <reified T : Task> Project.task(name: String, noinline configuration: T.() -> Unit) =
         tasks.create(name, T::class.java, configuration)
@@ -85,11 +89,14 @@ class KotlinClosure1<in T : Any, V : Any>(
     fun doCall(it: T): V? = it.function()
 }
 
-val Task.services: ServiceRegistry get() {
-    val field = AbstractTask::class.java.getDeclaredField("services")
-    field.isAccessible = true
-    return field.get(this) as ServiceRegistry
-}
+val Task.services: ServiceRegistry
+    get() {
+        val field = AbstractTask::class.java.getDeclaredField("services")
+        field.isAccessible = true
+        return field.get(this) as ServiceRegistry
+    }
+
+fun Task.isMirakleTask() = name == "mirakle" || name == "uploadToRemote" || name == "executeOnRemote" || name == "downloadFromRemote" || name == "downloadInParallel" || name == "fallback"
 
 /*
 * On Windows rsync is used under Cygwin environment

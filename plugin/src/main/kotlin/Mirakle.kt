@@ -10,6 +10,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.internal.AbstractTask
+import org.gradle.api.internal.tasks.DefaultTaskDependency
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
@@ -28,9 +29,10 @@ import java.io.OutputStreamWriter
 import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 import javax.inject.Inject
 
-class Mirakle : Plugin<Gradle> {
+open class Mirakle : Plugin<Gradle> {
     override fun apply(gradle: Gradle) {
         gradle.rootProject { it.extensions.create("mirakle", MirakleExtension::class.java) }
 
@@ -45,18 +47,24 @@ class Mirakle : Plugin<Gradle> {
         gradle.assertNonSupportedFeatures()
 
         val startParamsCopy = gradle.startParameter.copy()
+        val breakMode = startParamsCopy.projectProperties[BREAK_MODE]?.toBoolean() ?: false
 
         gradle.startParameter.apply {
-            setTaskNames(listOf("mirakle"))
-            setExcludedTaskNames(emptyList())
-            useEmptySettings()
-            buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
-                    ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
-                    File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
-                        stub.createNewFile()
-                        gradle.rootProject { it.afterEvaluate { stub.delete() } }
-                    }
-
+            if (breakMode) {
+                setTaskNames(listOf("mirakle") + taskNames)
+            } else {
+                setTaskNames(listOf("mirakle"))
+                setExcludedTaskNames(emptyList())
+            }
+            if (!breakMode) {
+                useEmptySettings()
+                buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
+                        ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
+                        File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
+                            stub.createNewFile()
+                            gradle.rootProject { it.afterEvaluate { stub.delete() } }
+                        }
+            }
             // disable build scan on local machine, but it will be enabled on remote if flag is set
             isBuildScan = false
         }
@@ -96,7 +104,6 @@ class Mirakle : Plugin<Gradle> {
                             "-P$BUILD_ON_REMOTE=true",
                             "-p ${config.remoteFolder}/\"${project.name}\""
                     )
-                    args(startParamsToArgs(startParamsCopy))
 
                     isIgnoreExitValue = true
 
@@ -175,15 +182,13 @@ class Mirakle : Plugin<Gradle> {
                                     .forProjectDirectory(gradle.rootProject.projectDir)
                                     .connect()
 
-                            try {
+                            connection.use { connection ->
                                 connection.newBuild()
                                         .withArguments(startParamsToArgs(startParamsCopy).plus("-P$FALLBACK=true"))
                                         .setStandardInput(upload.standardInput ?: System.`in`)
                                         .setStandardOutput(upload.standardOutput ?: System.out)
                                         .setStandardError(upload.errorOutput ?: System.err)
                                         .run()
-                            } finally {
-                                connection.close()
                             }
                         }
                     }
@@ -201,12 +206,111 @@ class Mirakle : Plugin<Gradle> {
                     }
                 }
 
+                if (breakMode && config.breakOnTasks.isNotEmpty()) {
+                    if (config.downloadInParallel) {
+                        throw MirakleException("Mirakle break mode doesn't work with download in parallel yet.")
+                    }
+
+                    gradle.taskGraph.whenReady { taskGraph ->
+                        val breakTaskPatterns = config.breakOnTasks.map(Pattern::compile)
+
+                        val graphWithoutMirakle = taskGraph.allTasks.filterNot(Task::isMirakleTask)
+
+                        val breakOnTasks = graphWithoutMirakle.filter { task ->
+                            breakTaskPatterns.any { it.matcher(task.name).find() }
+                        }
+
+                        when {
+                            breakOnTasks.isEmpty() -> {
+                                execute.args(startParamsToArgs(startParamsCopy))
+                                graphWithoutMirakle.forEach {
+                                    it.enabled = false
+                                }
+                            }
+                            breakOnTasks.size == 1 -> {
+                                val breakOnTask = breakOnTasks.first()
+
+                                val tasksForRemoteExecution = graphWithoutMirakle
+                                        .takeWhile { it != breakOnTask }
+                                        .onEach { it.enabled = false }
+
+                                startParamsCopy.newInstance().apply {
+                                    setTaskNames(tasksForRemoteExecution.map(Task::getPath))
+                                }.let { execute.args(startParamsToArgs(it)) }
+
+                                breakOnTask.apply {
+                                    enabled = true
+                                    mustRunAfter(download)
+                                    onlyIf { execute.didWork && execute.execResult!!.exitValue == 0 }
+
+                                    if (inputs.files.files.isNotEmpty()) {
+                                        val inputsNotInProjectDir = inputs.files.files.filter {
+                                            !it.path.startsWith(project.rootDir.path)
+                                        }
+
+                                        if (inputsNotInProjectDir.isNotEmpty()) {
+                                            println("${breakOnTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet.")
+                                            throw MirakleException()
+                                        }
+
+                                        // Need to include all of the parent directories down to the desired directory
+                                        val includeRules = inputs.files.files.map { file ->
+                                            val pathToInclude = file.path.substringAfter(project.rootDir.path).drop(1)
+                                            val split = pathToInclude.split("/")
+
+                                            (1 until split.size).mapIndexed { _, i ->
+                                                split.take(i).joinToString(separator = "/")
+                                            }.map {
+                                                "--include=$it"
+                                            }.let {
+                                                val isFile = split.last().contains('.')
+                                                if (isFile) {
+                                                    it.plus("--include=$pathToInclude")
+                                                } else {
+                                                    it.plus("--include=$pathToInclude/***")
+                                                }
+                                            }
+                                        }.flatten().toSet()
+
+                                        //val excludeAllRule = "--exclude=/**" // TODO does it make sense to exclude all except the inputs?
+
+                                        download.setArgs(includeRules /*+ excludeAllRule */+ download.args!!.toList())
+                                    }
+                                }
+
+                                execute.doFirst {
+                                    println("Mirakle will break remote execution on $breakOnTask")
+                                }
+
+                                mirakle.dependsOn(breakOnTask)
+                                gradle.logTasks(graphWithoutMirakle - tasksForRemoteExecution)
+                            }
+                            else -> {
+                                println("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet.")
+                                throw MirakleException()
+                            }
+                        }
+                    }
+                } else {
+                    gradle.startParameter.apply {
+                        setTaskNames(taskNames - startParamsCopy.taskNames)
+                    }
+                    execute.args(startParamsToArgs(startParamsCopy))
+                }
+
                 gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
                 gradle.logBuild(startTime)
             }
         }
+    }
+}
+
+class MirakleBreakMode : Mirakle() {
+    override fun apply(gradle: Gradle) {
+        gradle.startParameter.projectProperties = gradle.startParameter.projectProperties.plus(BREAK_MODE to "true")
+        super.apply(gradle)
     }
 }
 
@@ -248,6 +352,8 @@ open class MirakleExtension {
 
     var downloadInParallel = false
     var downloadInterval = 2000L
+
+    var breakOnTasks = emptySet<String>()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
@@ -351,17 +457,19 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
                 rsyncFromRemoteArgs += "--exclude-from=${remoteIgnore.path}"
             }
 
-            // Mainframer doesn't have fallback and parallel download features implemented yet
-            // Use Mirakle's parameters instead
+            // Mainframer doesn't have these config params, use Mirakle's parameters instead
             fallback = mirakleConfig.fallback
             downloadInParallel = mirakleConfig.downloadInParallel
             downloadInterval = mirakleConfig.downloadInterval
+            sshArgs = mirakleConfig.sshArgs
+            breakOnTasks = mirakleConfig.breakOnTasks
         }
     }
 }
 
 const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
 const val FALLBACK = "mirakle.build.fallback"
+const val BREAK_MODE = "mirakle.break.mode"
 
 //TODO test
 fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
