@@ -309,7 +309,11 @@ open class Mirakle : Plugin<Gradle> {
 
 class MirakleBreakMode : Mirakle() {
     override fun apply(gradle: Gradle) {
-        gradle.startParameter.projectProperties = gradle.startParameter.projectProperties.plus(BREAK_MODE to "true")
+        gradle.startParameter.apply {
+            if (!projectProperties.containsKey(BREAK_MODE)) {
+                projectProperties = projectProperties.plus(BREAK_MODE to "true")
+            }
+        }
         super.apply(gradle)
     }
 }
