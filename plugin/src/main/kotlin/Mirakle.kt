@@ -286,7 +286,7 @@ open class Mirakle : Plugin<Gradle> {
                                 gradle.logTasks(graphWithoutMirakle - tasksForRemoteExecution)
                             }
                             else -> {
-                                println("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet.")
+                                println("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet. ${breakOnTasks.joinToString { it.path }}")
                                 throw MirakleException()
                             }
                         }
