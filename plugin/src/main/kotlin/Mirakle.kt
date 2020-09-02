@@ -44,18 +44,21 @@ class Mirakle : Plugin<Gradle> {
 
         gradle.assertNonSupportedFeatures()
 
-        val originalStartParams = gradle.startParameter.newInstance()
+        val startParamsCopy = gradle.startParameter.copy()
 
         gradle.startParameter.apply {
             setTaskNames(listOf("mirakle"))
             setExcludedTaskNames(emptyList())
             useEmptySettings()
-            buildFile = File(originalStartParams.currentDir, "mirakle.gradle").takeIf(File::exists)
+            buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
                     ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
-                    File(originalStartParams.currentDir, "mirakle_build_file_stub").also { stub ->
+                    File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
                         stub.createNewFile()
                         gradle.rootProject { it.afterEvaluate { stub.delete() } }
                     }
+
+            // disable build scan on local machine, but it will be enabled on remote if flag is set
+            isBuildScan = false
         }
 
         gradle.rootProject { project ->
@@ -93,7 +96,7 @@ class Mirakle : Plugin<Gradle> {
                             "-P$BUILD_ON_REMOTE=true",
                             "-p ${config.remoteFolder}/\"${project.name}\""
                     )
-                    args(startParamsToArgs(originalStartParams))
+                    args(startParamsToArgs(startParamsCopy))
 
                     isIgnoreExitValue = true
 
@@ -174,7 +177,7 @@ class Mirakle : Plugin<Gradle> {
 
                             try {
                                 connection.newBuild()
-                                        .withArguments(startParamsToArgs(originalStartParams).plus("-P$FALLBACK=true"))
+                                        .withArguments(startParamsToArgs(startParamsCopy).plus("-P$FALLBACK=true"))
                                         .setStandardInput(upload.standardInput ?: System.`in`)
                                         .setStandardOutput(upload.standardOutput ?: System.out)
                                         .setStandardError(upload.errorOutput ?: System.err)
@@ -269,7 +272,9 @@ val booleanParamsToOption = listOf(
         StartParameter::isContinueOnFailure to "--continue",
         StartParameter::isOffline to "--offline",
         StartParameter::isParallelProjectExecutionEnabled to "--parallel",
-        StartParameter::isConfigureOnDemand to "--configure-on-demand"
+        StartParameter::isConfigureOnDemand to "--configure-on-demand",
+        StartParameter::isBuildScan to "--scan",
+        StartParameter::isNoBuildScan to "--no-scan"
 )
 
 val negativeBooleanParamsToOption = listOf(
