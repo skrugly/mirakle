@@ -36,6 +36,7 @@ rootProject {
 ```
 * [Setup local machine](docs/SETUP_LOCAL.md)
 * [Setup remote machine](docs/SETUP_REMOTE.md)
+* [Tips and Tricks](docs/TIPS_AND_TRICKS.md)
 
 ## Usage
 ```
