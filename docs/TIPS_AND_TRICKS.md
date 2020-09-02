@@ -1,7 +1,7 @@
 # Tips and Tricks
 
 - [Speed up Android build by breaking remote execution on `package` task](#speed-up-android-build-by-breaking-remote-execution-on-package-task)
-- [Show list of updates made by rsync (deletions, uploads, downloads)](#show-list-of-updates-made-by-rsync-(deletions,-uploads,-downloads))
+- [Show list of updates made by rsync (deletions, uploads, downloads)](#show-list-of-updates-made-by-rsync-deletions-uploads-downloads)
 - [Show total transfer progress](#show-total-transfer-progress)
 
 Contribution is welcome!
