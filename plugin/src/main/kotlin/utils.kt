@@ -2,6 +2,7 @@ import groovy.lang.Closure
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
+import org.gradle.StartParameter
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
@@ -99,3 +100,8 @@ fun fixPathForWindows(path: String) = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
     val path = path.substringAfter(":\\").replace('\\', '/')
     "/$windowsDisk/$path"
 } else path
+
+fun StartParameter.copy() = newInstance().also { copy ->
+    copy.isBuildScan = this.isBuildScan
+    copy.isNoBuildScan = this.isNoBuildScan
+}
