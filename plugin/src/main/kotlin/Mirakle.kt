@@ -10,7 +10,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.internal.AbstractTask
-import org.gradle.api.internal.tasks.DefaultTaskDependency
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
@@ -206,39 +205,42 @@ open class Mirakle : Plugin<Gradle> {
                     }
                 }
 
-                if (breakMode && config.breakOnTasks.isNotEmpty()) {
+                val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
+                val breakOnTasks = breakTaskFromCLI?.let(::listOf) ?: config.breakOnTasks
+
+                if (breakMode && breakOnTasks.isNotEmpty()) {
                     if (config.downloadInParallel) {
                         throw MirakleException("Mirakle break mode doesn't work with download in parallel yet.")
                     }
 
                     gradle.taskGraph.whenReady { taskGraph ->
-                        val breakTaskPatterns = config.breakOnTasks.map(Pattern::compile)
+                        val breakTaskPatterns = breakOnTasks.map(Pattern::compile)
 
                         val graphWithoutMirakle = taskGraph.allTasks.filterNot(Task::isMirakleTask)
 
-                        val breakOnTasks = graphWithoutMirakle.filter { task ->
+                        val breakTasks = graphWithoutMirakle.filter { task ->
                             breakTaskPatterns.any { it.matcher(task.name).find() }
                         }
 
                         when {
-                            breakOnTasks.isEmpty() -> {
+                            breakTasks.isEmpty() -> {
                                 execute.args(startParamsToArgs(startParamsCopy))
                                 graphWithoutMirakle.forEach {
                                     it.enabled = false
                                 }
                             }
-                            breakOnTasks.size == 1 -> {
-                                val breakOnTask = breakOnTasks.first()
+                            breakTasks.size == 1 -> {
+                                val breakTask = breakTasks.first()
 
                                 val tasksForRemoteExecution = graphWithoutMirakle
-                                        .takeWhile { it != breakOnTask }
+                                        .takeWhile { it != breakTask }
                                         .onEach { it.enabled = false }
 
                                 startParamsCopy.newInstance().apply {
                                     setTaskNames(tasksForRemoteExecution.map(Task::getPath))
                                 }.let { execute.args(startParamsToArgs(it)) }
 
-                                breakOnTask.apply {
+                                breakTask.apply {
                                     enabled = true
                                     mustRunAfter(download)
                                     onlyIf { execute.didWork && execute.execResult!!.exitValue == 0 }
@@ -249,7 +251,7 @@ open class Mirakle : Plugin<Gradle> {
                                         }
 
                                         if (inputsNotInProjectDir.isNotEmpty()) {
-                                            println("${breakOnTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet.")
+                                            println("${breakTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet.")
                                             throw MirakleException()
                                         }
 
@@ -279,14 +281,14 @@ open class Mirakle : Plugin<Gradle> {
                                 }
 
                                 execute.doFirst {
-                                    println("Mirakle will break remote execution on $breakOnTask")
+                                    println("Mirakle will break remote execution on $breakTask")
                                 }
 
-                                mirakle.dependsOn(breakOnTask)
+                                mirakle.dependsOn(breakTask)
                                 gradle.logTasks(graphWithoutMirakle - tasksForRemoteExecution)
                             }
                             else -> {
-                                println("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet. ${breakOnTasks.joinToString { it.path }}")
+                                println("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet. ${breakTasks.joinToString { it.path }}")
                                 throw MirakleException()
                             }
                         }
@@ -474,6 +476,7 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
 const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
 const val FALLBACK = "mirakle.build.fallback"
 const val BREAK_MODE = "mirakle.break.mode"
+const val BREAK_TASK = "mirakle.break.task"
 
 //TODO test
 fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
