@@ -251,7 +251,7 @@ open class Mirakle : Plugin<Gradle> {
                                         }
 
                                         if (inputsNotInProjectDir.isNotEmpty()) {
-                                            println("${breakTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet.")
+                                            println("${breakTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet. ${inputsNotInProjectDir.joinToString { it.path }}")
                                             throw MirakleException()
                                         }
 
