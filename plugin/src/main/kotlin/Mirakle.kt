@@ -206,7 +206,7 @@ open class Mirakle : Plugin<Gradle> {
                 }
 
                 val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
-                val breakOnTasks = breakTaskFromCLI?.let(::listOf) ?: config.breakOnTasks
+                val breakOnTasks = breakTaskFromCLI?.takeIf(String::isNotBlank)?.let(::listOf) ?: config.breakOnTasks
 
                 if (breakMode && breakOnTasks.isNotEmpty()) {
                     if (config.downloadInParallel) {
@@ -214,7 +214,7 @@ open class Mirakle : Plugin<Gradle> {
                     }
 
                     gradle.taskGraph.whenReady { taskGraph ->
-                        val breakTaskPatterns = breakOnTasks.map(Pattern::compile)
+                        val breakTaskPatterns = breakOnTasks.filter(String::isNotBlank).map(Pattern::compile)
 
                         val graphWithoutMirakle = taskGraph.allTasks.filterNot(Task::isMirakleTask)
 
