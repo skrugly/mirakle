@@ -112,6 +112,27 @@ object BreakModeTest : Spek({
                     testResult.assertTaskSucceed("mainTask")
                 }
             }
+
+            on("building the project with mirakle.gradle") {
+                val uuid = UUID.randomUUID().toString()
+
+                buildFileWriter().use {
+                    it.appendln(BUILD_FILE_WITH_TASKS_GRAPH)
+                }
+
+                folder.newFile("mirakle.gradle")
+                        .outputStream()
+                        .let(::PrintWriter)
+                        .use {
+                            it.append(PRINT_MESSAGE(uuid))
+                        }
+
+                val testResult = gradleRunner.test()
+
+                it("should evaluate mirakle.gradle build file") {
+                    testResult.assertOutputContains(uuid)
+                }
+            }
         }
     }
 })

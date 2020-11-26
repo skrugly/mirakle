@@ -63,6 +63,10 @@ open class Mirakle : Plugin<Gradle> {
                             stub.createNewFile()
                             gradle.rootProject { it.afterEvaluate { stub.delete() } }
                         }
+            } else {
+                if (File(startParamsCopy.currentDir, "mirakle.gradle").exists()) {
+                    gradle.apply(mutableMapOf("from" to "mirakle.gradle"))
+                }
             }
             // disable build scan on local machine, but it will be enabled on remote if flag is set
             isBuildScan = false
@@ -207,7 +211,7 @@ open class Mirakle : Plugin<Gradle> {
 
                 val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
                 val breakOnTasks = breakTaskFromCLI?.takeIf(String::isNotBlank)?.let(::listOf) ?: config.breakOnTasks
-
+                
                 if (breakMode && breakOnTasks.isNotEmpty()) {
                     if (config.downloadInParallel) {
                         throw MirakleException("Mirakle break mode doesn't work with download in parallel yet.")
