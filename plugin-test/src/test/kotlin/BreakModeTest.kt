@@ -133,6 +133,9 @@ object BreakModeTest : Spek({
                     testResult.assertOutputContains(uuid)
                 }
             }
+
+            // TODO test inputs of break task are downloaded
+            // TODO test rsync's include rules for inputs are applied
         }
     }
 })
