@@ -128,6 +128,29 @@ rootProject {
 }
 """
 
+val MIRAKLE_INIT_WITH_BREAK_MODE = fun(remoteFolder: String, breakOnTask: String) = """
+initscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.instamotor:mirakle:${BuildConfig.VERSION}"
+    }
+}
+
+apply plugin: MirakleBreakMode
+
+rootProject {
+    mirakle {
+        host "localhost"
+        fallback false
+        remoteFolder "$remoteFolder/mirakle"
+        breakOnTasks += ["$breakOnTask"]
+    }
+}
+"""
+
 val ASSERT_EXEC_ARGS = fun(remoteFolder: String) = """
 mirakle {
     host "localhost"
@@ -225,6 +248,7 @@ const val ASSERT_NOT_REMOTE = """if(hasProperty("$BUILD_ON_REMOTE")) throw Excep
 const val THROW = """throw Exception()"""
 
 val PRINT_MESSAGE = fun(message: String) = """print("$message")"""
+val PRINT_MESSAGE_ON_LOCAL = fun(message: String) = """if(!hasProperty("$BUILD_ON_REMOTE")) print("$message")"""
 
 val ASSERT_START_PARAM_IS_TRUE = fun(name: String) =
         """
@@ -339,6 +363,42 @@ val ASSERT_DOWNLOAD_AFTER_DOWNLOAD_IN_PARALLEL =
             }
         }
         """
+
+val BUILD_FILE_WITH_TASKS_GRAPH =
+        """
+            val testTask1 = tasks.create("testTask1")
+            val testTask2 = tasks.create("testTask2")
+            val testTask3 = tasks.create("testTask3")
+            
+            val mainTask = tasks.create("mainTask")
+                .dependsOn(testTask3)
+                .dependsOn(testTask2)
+                .dependsOn(testTask1)
+            
+            testTask3.mustRunAfter(testTask2)
+            testTask2.mustRunAfter(testTask1)
+                        
+            testTask1.outputs.upToDateWhen { false }
+            testTask2.outputs.upToDateWhen { false }
+            testTask3.outputs.upToDateWhen { false }
+            mainTask.outputs.upToDateWhen { false }
+            
+            testTask1.doFirst {
+                println("do testTask1")
+            }
+            
+            testTask2.doFirst {
+                println("do testTask2")
+            }
+            
+            testTask3.doFirst {
+                println("do testTask3")
+            }
+
+            mainTask.doFirst {
+                println("do mainTask")
+            }
+        """.trimIndent()
 
 fun SpecBody.temporaryFolder(parentDir: File? = null) = object : ReadOnlyProperty<Any?, TemporaryFolder> {
     val folder = TemporaryFolder(parentDir)
