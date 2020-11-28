@@ -4,11 +4,13 @@ import org.jetbrains.spek.api.Spek
 import org.gradle.testkit.runner.GradleRunner
 import org.jetbrains.spek.api.dsl.*
 import java.io.*
+import java.util.Properties
 
 object StartParametersTest : Spek({
     BuildConfig.TESTED_GRADLE_VERSIONS.forEach { gradleVersion ->
         describe("project with gradle version $gradleVersion") {
             val folder by temporaryFolder()
+            val gradleHomeFolder by temporaryFolder()
 
             beforeEachTest {
                 GradleRunner.create()
@@ -193,6 +195,61 @@ object StartParametersTest : Spek({
 
                 it("should receive the same properties") {
                     gradleRunner.addArgs(properties.flatMap { (k, v) -> listOf("--system-prop", "$k=$v") }).build()
+                }
+            }
+
+            /*
+            * If an option is configured in multiple locations, the first one wins:
+            *   1. mirakle.properties + mirakle_local.properties
+            *   2. args from CLI
+            *   3. GRADLE_USER_HOME/gradle.properties
+            * */
+            on("having properties files") {
+                folder.newFile("mirakle.properties").apply {
+                    Properties().apply {
+                        setProperty("prop1", "1")
+                        setProperty("systemProp.prop2", "2")
+                    }.store(outputStream(), null)
+                }
+
+                folder.newFile("mirakle_local.properties").apply {
+                    Properties().apply {
+                        setProperty("prop3", "3")
+                        setProperty("systemProp.prop4", "4")
+                    }.store(outputStream(), null)
+                }
+
+                gradleHomeFolder.newFile("gradle.properties").apply {
+                    Properties().apply {
+                        setProperty("prop3", "3_COLLISION")
+                        setProperty("systemProp.prop4", "4_COLLISION")
+                        setProperty("prop4", "4")
+                        setProperty("systemProp.prop5", "5")
+                    }.store(outputStream(), null)
+                }
+
+                it("should receive properties") {
+                    buildFileWriter().use {
+                        it.append(ASSERT_CONTAINS_PROJECT_PROPERTIES(
+                                mapOf(
+                                        "prop1" to "1",
+                                        "prop3" to "3",
+                                        "prop4" to "4"
+                                )
+                        ))
+
+                        it.append(ASSERT_CONTAINS_SYSTEM_PROPERTIES(
+                                mapOf(
+                                        "prop2" to "2",
+                                        "prop4" to "4",
+                                        "prop5" to "5"
+                                )
+                        ))
+                    }
+
+                    gradleRunner
+                            .withTestKitDir(gradleHomeFolder.root)
+                            .build()
                 }
             }
         }
