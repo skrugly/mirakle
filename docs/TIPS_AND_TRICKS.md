@@ -55,6 +55,10 @@ Task executeOnRemote took : 8.08 secs
 Task downloadFromRemote took : 1.065 secs
 Task app:packageStagingDebug took : 1.362 secs
 ```
+#### Pass break task pattern via command line arguments
+```
+> ./gradlew assembleStagingDebug --project-prop mirakle.break.task=package
+```
 
 ### Show list of updates made by rsync (deletions, uploads, downloads)
 

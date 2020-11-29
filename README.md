@@ -15,14 +15,14 @@ Mirakle is designed specially for Gradle build system. It works as seamless as p
 
 
 ## Setup
-* Put this into `USER_HOME/.gradle/init.d/mirakle_init.gradle`
+* Put this into `USER_HOME/.gradle/init.d/mirakle_init.gradle` on local machine
 ```groovy
 initscript {
     repositories {
         jcenter()
     }
     dependencies {
-        classpath "com.instamotor:mirakle:1.3.6"
+        classpath "com.instamotor:mirakle:1.4.0"
     }
 }
  
