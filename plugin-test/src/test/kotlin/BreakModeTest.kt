@@ -94,6 +94,15 @@ object BreakModeTest : Spek({
             }
 
             on("breaking on testTask3 passed through CLI") {
+                // init mirakle in not break mode
+                // passing break task via CLI should enable it itself
+                folder.root.listFiles().first { it.name == "mirakle_init.gradle" }.delete()
+
+                folder.newFile("mirakle_init.gradle")
+                        .outputStream()
+                        .let(::PrintWriter)
+                        .use { it.append(MIRAKLE_INIT_WITH_FOLDER(folder.root.canonicalPath)) }
+
                 buildFileWriter().use {
                     it.appendln(BUILD_FILE_WITH_TASKS_GRAPH)
                 }

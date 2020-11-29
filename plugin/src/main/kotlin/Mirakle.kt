@@ -46,7 +46,9 @@ open class Mirakle : Plugin<Gradle> {
         gradle.assertNonSupportedFeatures()
 
         val startParamsCopy = gradle.startParameter.copy()
-        val breakMode = startParamsCopy.projectProperties[BREAK_MODE]?.toBoolean() ?: false
+        val breakMode = startParamsCopy.projectProperties.let {
+            (it[BREAK_MODE]?.toBoolean() ?: false) || (it[BREAK_TASK]?.isNotBlank() ?: false)
+        }
 
         gradle.startParameter.apply {
             if (breakMode) {
