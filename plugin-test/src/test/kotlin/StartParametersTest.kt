@@ -225,8 +225,13 @@ object StartParametersTest : Spek({
                         setProperty("systemProp.prop4", "4_COLLISION")
                         setProperty("prop4", "4")
                         setProperty("systemProp.prop5", "5")
+                        setProperty("prop6", "6")
                     }.store(outputStream(), null)
                 }
+
+                val gradleRunnerWithProperties = gradleRunner.addArgs(
+                        listOf("--system-prop", "prop2=22", "--project-prop", "prop6=66")
+                )
 
                 it("should receive properties") {
                     buildFileWriter().use {
@@ -234,7 +239,8 @@ object StartParametersTest : Spek({
                                 mapOf(
                                         "prop1" to "1",
                                         "prop3" to "3",
-                                        "prop4" to "4"
+                                        "prop4" to "4",
+                                        "prop6" to "66"
                                 )
                         ))
 
@@ -247,7 +253,7 @@ object StartParametersTest : Spek({
                         ))
                     }
 
-                    gradleRunner
+                    gradleRunnerWithProperties
                             .withTestKitDir(gradleHomeFolder.root)
                             .build()
                 }
