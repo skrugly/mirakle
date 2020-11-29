@@ -1,8 +1,10 @@
 # Tips and Tricks
 
 - [Speed up Android build by breaking remote execution on `package` task](#speed-up-android-build-by-breaking-remote-execution-on-package-task)
+- [Pass break task pattern via command line argument](#pass-break-task-pattern-via-command-line-argument)
 - [Show list of updates made by rsync (deletions, uploads, downloads)](#show-list-of-updates-made-by-rsync-deletions-uploads-downloads)
 - [Show total transfer progress](#show-total-transfer-progress)
+- [Set Gradle properties for remote build using mirakle.properties and mirakle_local.properties](#set-gradle-properties-for-remote-build-using-mirakleproperties-and-mirakle_localproperties)
 
 Contribution is welcome!
 
@@ -24,7 +26,7 @@ initscript {
         jcenter()
     }
     dependencies {
-        classpath "com.instamotor:mirakle:1.4.0-RC-1"
+        classpath "com.instamotor:mirakle:1.4.0"
     }
 }
  
@@ -55,7 +57,7 @@ Task executeOnRemote took : 8.08 secs
 Task downloadFromRemote took : 1.065 secs
 Task app:packageStagingDebug took : 1.362 secs
 ```
-#### Pass break task pattern via command line arguments
+#### Pass break task pattern via command line argument
 ```
 > ./gradlew assembleStagingDebug --project-prop mirakle.break.task=package
 ```
@@ -181,4 +183,8 @@ Options added for each increase in verbose level:
 2) BACKUP,MISC2,MOUNT,NAME2,REMOVE,SKIP
 ```
 
-     
+### Set Gradle properties for remote build using `mirakle.properties` and `mirakle_local.properties`
+`PROJECT_DIR/mirakle.properties` and `PROJECT_DIR/mirakle_local.properties` can be used to pass specific Gradle properties to remote build or override existing properties.
+Properties from that files have highest priority over all other properties.
+ 
+Both files serves the same purpose, but `mirakle_local.properties` may be used to define user specific values and skipped from committing to VCS.
