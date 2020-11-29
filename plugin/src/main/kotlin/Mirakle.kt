@@ -86,6 +86,9 @@ open class Mirakle : Plugin<Gradle> {
 
                 println("Here's Mirakle ${BuildConfig.VERSION}. All tasks will be executed on ${config.host}.")
 
+                val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
+                val breakOnTasks = breakTaskFromCLI?.takeIf(String::isNotBlank)?.let(::listOf) ?: config.breakOnTasks
+
                 val upload = project.task<Exec>("uploadToRemote") {
                     setCommandLine("rsync")
                     args(
@@ -107,6 +110,16 @@ open class Mirakle : Plugin<Gradle> {
                             "-P$BUILD_ON_REMOTE=true",
                             "-p ${config.remoteFolder}/\"${project.name}\""
                     )
+                    startParamsCopy.copy()
+                            .apply {
+                                if (breakMode && breakOnTasks.isNotEmpty()) {
+                                    // In break mode tasks arguments will be set later when Gradle::taskGraph is ready
+                                    setTaskNames(emptyList())
+                                }
+                            }
+                            .let(::mergeStartParamsWithProperties)
+                            .let(::startParamsToArgs)
+                            .let(::args)
 
                     isIgnoreExitValue = true
 
@@ -209,9 +222,6 @@ open class Mirakle : Plugin<Gradle> {
                     }
                 }
 
-                val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
-                val breakOnTasks = breakTaskFromCLI?.takeIf(String::isNotBlank)?.let(::listOf) ?: config.breakOnTasks
-                
                 if (breakMode && breakOnTasks.isNotEmpty()) {
                     if (config.downloadInParallel) {
                         throw MirakleException("Mirakle break mode doesn't work with download in parallel yet.")
@@ -228,7 +238,7 @@ open class Mirakle : Plugin<Gradle> {
 
                         when {
                             breakTasks.isEmpty() -> {
-                                execute.args(startParamsToArgs(startParamsCopy))
+                                execute.args(startParamsCopy.taskNames.minus("mirakle"))
                                 graphWithoutMirakle.forEach {
                                     it.enabled = false
                                 }
@@ -240,9 +250,7 @@ open class Mirakle : Plugin<Gradle> {
                                         .takeWhile { it != breakTask }
                                         .onEach { it.enabled = false }
 
-                                startParamsCopy.newInstance().apply {
-                                    setTaskNames(tasksForRemoteExecution.map(Task::getPath))
-                                }.let { execute.args(startParamsToArgs(it)) }
+                                execute.args(tasksForRemoteExecution.map(Task::getPath))
 
                                 breakTask.apply {
                                     enabled = true
@@ -301,7 +309,6 @@ open class Mirakle : Plugin<Gradle> {
                     gradle.startParameter.apply {
                         setTaskNames(taskNames - startParamsCopy.taskNames)
                     }
-                    execute.args(startParamsToArgs(startParamsCopy))
                 }
 
                 gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
@@ -554,5 +561,43 @@ class DownloadInParallelWorker @Inject constructor(val downloadInterval: Long) :
     companion object {
         lateinit var gradle: Gradle
         lateinit var downloadExecAction: ExecAction
+    }
+}
+
+/*
+* If an option is configured in multiple locations, the first one wins:
+*   1. mirakle.properties + mirakle_local.properties
+*   2. args from CLI
+*   3. GRADLE_USER_HOME/gradle.properties
+* */
+fun mergeStartParamsWithProperties(startParameter: StartParameter): StartParameter {
+    fun loadPropertiesIfExist(file: File) = file.takeIf(File::exists)?.let {
+        Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
+    } ?: emptyMap()
+
+    fun addPropertiesToStartParams(properties: Map<String, String>, startParameter: StartParameter) {
+        properties.onEach { (key, value) ->
+            if (key.startsWith("systemProp.")) {
+                startParameter.systemPropertiesArgs[key.removePrefix("systemProp.")] = value
+            } else {
+                startParameter.projectProperties[key] = value
+            }
+        }
+    }
+
+    val mirakleProperties = loadPropertiesIfExist(File(startParameter.currentDir, "mirakle.properties"))
+    val mirakleLocalProperties = loadPropertiesIfExist(File(startParameter.currentDir, "mirakle_local.properties"))
+    val gradleHomeDirProperties = loadPropertiesIfExist(File(startParameter.gradleUserHomeDir, "gradle.properties"))
+
+    return startParameter.copy().apply {
+        projectProperties = mutableMapOf()
+        systemPropertiesArgs = mutableMapOf()
+
+        addPropertiesToStartParams(gradleHomeDirProperties, this)
+
+        addPropertiesToStartParams(startParameter.projectProperties, this)
+        addPropertiesToStartParams(startParameter.systemPropertiesArgs.mapKeys { (key, _) -> "systemProp.$key" }, this)
+
+        addPropertiesToStartParams(mirakleProperties + mirakleLocalProperties, this)
     }
 }
