@@ -1,5 +1,5 @@
 group 'com.instamotor'
-version '1.4.0-RC-1'
+version '1.4.0'
 
 buildscript {
     ext.kotlin_version = '1.3.72'
