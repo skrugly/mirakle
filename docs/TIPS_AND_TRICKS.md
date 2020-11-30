@@ -5,6 +5,7 @@
 - [Show list of updates made by rsync (deletions, uploads, downloads)](#show-list-of-updates-made-by-rsync-deletions-uploads-downloads)
 - [Show total transfer progress](#show-total-transfer-progress)
 - [Set Gradle properties for remote build using mirakle.properties and mirakle_local.properties](#set-gradle-properties-for-remote-build-using-mirakleproperties-and-mirakle_localproperties)
+- [Determine if build occurs on remote machine](#determine-if-build-occurs-on-remote-machine)
 
 Contribution is welcome!
 
@@ -188,3 +189,11 @@ Options added for each increase in verbose level:
 Properties from that files have highest priority over all other properties.
  
 Both files serves the same purpose, but `mirakle_local.properties` may be used to define user specific values and skipped from committing to VCS.
+
+### Determine if build occurs on remote machine
+Put it in `build.gradle` in project dir:
+```
+if (project.hasProperty('mirakle.build.on.remote')) {
+    ...
+}
+```
