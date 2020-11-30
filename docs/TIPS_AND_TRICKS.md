@@ -6,6 +6,7 @@
 - [Show total transfer progress](#show-total-transfer-progress)
 - [Set Gradle properties for remote build using mirakle.properties and mirakle_local.properties](#set-gradle-properties-for-remote-build-using-mirakleproperties-and-mirakle_localproperties)
 - [Determine if build occurs on remote machine](#determine-if-build-occurs-on-remote-machine)
+- [Print Gradle arguments of remote build](#print-gradle-arguments-of-remote-build)
 
 Contribution is welcome!
 
@@ -195,5 +196,20 @@ Put it in `build.gradle` in project dir:
 ```
 if (project.hasProperty('mirakle.build.on.remote')) {
     ...
+}
+```
+
+
+### Print Gradle arguments of remote build
+Put this into `USER_HOME/.gradle/init.d/mirakle_init.gradle` or `PROJECT_DIR/mirakle.gradle` on local machine:
+```
+taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(":executeOnRemote")) {
+        gradle.rootProject.executeOnRemote.doFirst {
+            println("============REMOTE GRADLE ARGUMENTS===============")
+            println(rootProject.executeOnRemote.args.drop(2).join("\n"))
+            println("============REMOTE GRADLE ARGUMENTS===============")
+        }
+    }
 }
 ```
