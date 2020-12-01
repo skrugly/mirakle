@@ -75,6 +75,16 @@ object BuildingTest : Spek({
                 }
             }
 
+            on("explicitly providing mirakle task") {
+                val testResult = gradleRunner.addArgs("mirakle").test()
+
+                it("should be executed on remote") {
+                    testResult.assertTaskSucceed("uploadToRemote")
+                    testResult.assertTaskSucceed("executeOnRemote")
+                    testResult.assertTaskSucceed("downloadFromRemote")
+                }
+            }
+
             on("empty tasks") {
                 val testResult = gradleRunner.
                         withArguments(gradleRunner.arguments.minus("tasks"))
