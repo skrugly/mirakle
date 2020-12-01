@@ -52,6 +52,7 @@ open class Mirakle : Plugin<Gradle> {
 
         gradle.startParameter.apply {
             if (breakMode) {
+                // pass all the tasks alongside with "mirakle" to let Gradle calculate taskGraph
                 setTaskNames(listOf("mirakle") + taskNames)
             } else {
                 setTaskNames(listOf("mirakle"))
@@ -309,7 +310,12 @@ open class Mirakle : Plugin<Gradle> {
                     }
                 } else {
                     gradle.startParameter.apply {
-                        setTaskNames(taskNames - startParamsCopy.taskNames)
+                        if (taskNames.contains("downloadInParallel")) {
+                            setTaskNames(listOf("downloadInParallel", "mirakle"))
+                        } else {
+                            setTaskNames(listOf("mirakle"))
+                        }
+                        setExcludedTaskNames(emptyList())
                     }
                 }
 
