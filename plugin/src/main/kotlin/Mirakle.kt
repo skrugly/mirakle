@@ -1,8 +1,5 @@
 import com.googlecode.streamflyer.core.ModifyingWriter
-import com.googlecode.streamflyer.regex.RegexModifier
-import com.googlecode.streamflyer.regex.addons.tokens.Token
-import com.googlecode.streamflyer.regex.addons.tokens.TokenProcessor
-import com.googlecode.streamflyer.regex.addons.tokens.TokensMatcher
+import com.googlecode.streamflyer.regex.fast.FastRegexModifier
 import com.instamotor.BuildConfig
 import org.apache.commons.io.output.WriterOutputStream
 import org.gradle.StartParameter
@@ -437,10 +434,7 @@ val consoleOutputToOption = listOf(
 //since build occurs on a remote machine, console output will contain remote directories
 //to let IDE and other tools properly parse the output, mirakle need to replace remote dir by local one
 fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String): OutputStream {
-    val tokenList = listOf(
-            Token("1", "\\/.*?\\/${remoteDir.replace("~/", "")}", localDir)
-    )
-    val modifier = RegexModifier(TokensMatcher(tokenList), TokenProcessor(tokenList), 0, 1)
+    val modifier = FastRegexModifier("\\/.*?\\/${remoteDir.replace("~/", "")}", 0, localDir, 0, 1)
     val modifyingWriter = ModifyingWriter(OutputStreamWriter(target), modifier)
     return WriterOutputStream(modifyingWriter)
 }
