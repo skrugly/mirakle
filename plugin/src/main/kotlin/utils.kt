@@ -104,8 +104,8 @@ fun Task.isMirakleTask() = name == "mirakle" || name == "uploadToRemote" || name
 * */
 fun fixPathForWindows(path: String) = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
     val windowsDisk = path.first().toLowerCase()
-    val path = path.substringAfter(":\\").replace('\\', '/')
-    "/$windowsDisk/$path"
+    val windowsPath = path.substringAfter(":\\").replace('\\', '/')
+    "/cygdrive/$windowsDisk/$windowsPath"
 } else path
 
 fun StartParameter.copy() = newInstance().also { copy ->
