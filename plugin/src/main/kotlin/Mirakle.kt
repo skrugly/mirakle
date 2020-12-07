@@ -353,7 +353,9 @@ open class MirakleExtension {
             ".gradle",
             ".idea",
             "**/.git/",
-            "**/local.properties"
+            "**/local.properties",
+            "**/mirakle.properties",
+            "**/mirakle_local.properties"
     )
 
     var rsyncToRemoteArgs = setOf(
