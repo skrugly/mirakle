@@ -22,7 +22,7 @@ initscript {
         jcenter()
     }
     dependencies {
-        classpath "com.instamotor:mirakle:1.4.0"
+        classpath "com.instamotor:mirakle:1.4.1"
     }
 }
  
