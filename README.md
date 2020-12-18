@@ -4,14 +4,12 @@ A Gradle plugin that allows you to move build process from a local machine to a 
 Compatible with Gradle 4.0+. Works seamlessly with IntelliJ IDEA and Android Studio.
 
 #### Why
-Remote machine supposed to be much performant than you working machine.
+Remote machine supposed to be much performant than your working machine.
 Also having a sufficient network bandwidth or small amount of data that your build produce, you gain **build speed boost**.
-
-#### How it differs from [Mainframer](https://github.com/buildfoundation/mainframer)
 
 Mirakle is designed specially for Gradle build system. It works as seamless as possible. Once plugin installed, you workflow will not be different at all.
 
-(It's a good thing to prank your colleague. Imagine his surprise when one day he get several times faster build time.)
+(It's a good thing to prank your colleague. Imagine his surprise when one day he gets several times faster build time.)
 
 
 ## Setup
@@ -100,6 +98,21 @@ mirakle {
     breakOnTasks = ["install", "package"] // regex pattern
 }
 ```
+
+|Parameter|  Default value  | Description  | 
+|---|---|---|
+| host  |  **required** | Name of remote machine. |   
+| remoteFolder  | `"~/mirakle"`  | Remote folder where mirakle uploads project files.  |
+| excludeLocal  | `["**/build"]`  | Set of exclude patterns of local files for rsync when it uploads files to remote machine.  | 
+| excludeRemote  | `["**/src/"]`  | Set of exclude patterns of remote files for rsync when it downloads files from remote machine. | 
+| excludeCommon  | `[".gradle", ".idea", "**/.git/", "**/local.properties", "**/mirakle.properties", "**/mirakle_local.properties"]`  | Set of exclude patterns for rsync for both upload and download.  | 
+| rsyncToRemoteArgs  |  `["--archive", "--delete"]`  | Set of rsync arguments that are used when rsync uploads files to remote machine.  |  
+| rsyncFromRemoteArgs  |  `["--archive", "--delete"]` | Set of rsync arguments that are used when rsync downloads files from remote machine.  |
+| sshArgs  |  `[]` | Set of ssh arguments that are used to establish connection with remote machine. |   
+| fallback  | `false`  | If set true mirakle will execute build on local machine when upload to remote failed.  |  
+| downloadInParallel  | `false`  | If set true mirakle will constantly fetch new files from remote machine during "executeOnRemote" phase of build. May result to reduction of total build time.      | 
+| downloadInterval  | `2000`  | Download in parallel interval in mills.  | 
+| breakOnTasks  | `[]`  |  Set of regex patterns of tasks on which remote build should be finished and continued on local machine. [May result in speeding up Android builds.](https://github.com/Adambl4/mirakle/blob/development/docs/TIPS_AND_TRICKS.md#speed-up-android-build-by-breaking-remote-execution-on-package-task)      |
 ### Per-project config
 You can configure Mirakle differently for any project. There's two ways:
 1. In `USER_HOME/.gradle/init.d/mirakle_init.gradle`
