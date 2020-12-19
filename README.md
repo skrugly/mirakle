@@ -11,6 +11,7 @@ Mirakle is designed specially for Gradle build system. It works as seamless as p
 
 (It's a good thing to prank your colleague. Imagine his surprise when one day he gets several times faster build time.)
 
+[5 minutes read on Medium](https://medium.com/makingtuenti/android-remote-compilation-a4411873a8c6) by Guillermo Merino Jiménez & David Pastor Herranz
 
 ## Setup
 * Put this into `USER_HOME/.gradle/init.d/mirakle_init.gradle` on local machine
