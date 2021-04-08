@@ -1,9 +1,8 @@
 import groovy.lang.Closure
-import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
-import org.gradle.api.GradleException
 import org.gradle.StartParameter
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
@@ -99,14 +98,34 @@ val Task.services: ServiceRegistry
 fun Task.isMirakleTask() = name == "mirakle" || name == "uploadToRemote" || name == "executeOnRemote" || name == "downloadFromRemote" || name == "downloadInParallel" || name == "fallback"
 
 /*
-* On Windows rsync is used under Cygwin environment
-* and classical Windows path "C:\Users" must be replaced by "/cygdrive/c/Users"
+* On Windows when rsync is used under Cygwin environment
+* then classical Windows path "C:\Users" must be replaced by "/cygdrive/c/Users"
 * */
-fun fixPathForWindows(path: String) = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-    val windowsDisk = path.first().toLowerCase()
-    val windowsPath = path.substringAfter(":\\").replace('\\', '/')
-    "/cygdrive/$windowsDisk/$windowsPath"
-} else path
+fun fixPathForСygwin(path: String): String {
+    return if (path.length > 2 && path[1] == ':') {
+        val windowsDisk = path.first().toLowerCase()
+        val windowsPath = fixWindowsPathSlashes(path.substringAfter(":\\"))
+        "/cygdrive/$windowsDisk/$windowsPath"
+    } else {
+        fixWindowsPathSlashes(path)
+    }
+}
+
+/*
+* On Windows when rsync is used under WSL environment
+* then classical Windows path "C:\Users" must be replaced by "/mnt/c/Users"
+* */
+fun fixPathForWsl(path: String): String {
+    return if (path.length > 2 && path[1] == ':') {
+        val windowsDisk = path.first().toLowerCase()
+        val windowsPath = fixWindowsPathSlashes(path.substringAfter(":\\"))
+        "/mnt/$windowsDisk/$windowsPath"
+    } else {
+        fixWindowsPathSlashes(path)
+    }
+}
+
+fun fixWindowsPathSlashes(path: String) = path.replace('\\', '/')
 
 fun StartParameter.copy() = newInstance().also { copy ->
     copy.isBuildScan = this.isBuildScan
