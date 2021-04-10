@@ -2,8 +2,8 @@ group rootProject.group
 def benchmarkVersion = '1.0.1'
 version benchmarkVersion
 
-apply plugin: 'maven'
-apply plugin: 'maven-publish'
+//apply plugin: 'maven'
+//apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
 repositories {
@@ -36,7 +36,7 @@ def pomConfig = {
     }
 }
 
-publishing {
+/*publishing {
     publications {
         MiraklePublication(MavenPublication) {
             from components.java
@@ -55,7 +55,7 @@ publishing {
             }
         }
     }
-}
+}*/
 
 bintray {
     user = System.getenv('BINTRAY_USER')

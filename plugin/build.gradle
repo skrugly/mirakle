@@ -1,9 +1,8 @@
 group rootProject.group
 version rootProject.version
 
-apply plugin: 'maven'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
+//apply plugin: 'com.jfrog.bintray'
 
 
 repositories {
@@ -58,7 +57,7 @@ publishing {
     }
 }
 
-bintray {
+/*bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_API_KEY')
     publish = true
@@ -74,13 +73,13 @@ bintray {
         version {
             name = rootProject.version
 
-            /*gpg { //TODO
+            *//*gpg { //TODO
                 sign = true
                 passphrase = System.getenv('BINTRAY_GPG_PASSPHRASE')
-            }*/
+            }*//*
         }
     }
-}
+}*/
 
 task validatePublishing {
     doLast {
@@ -91,4 +90,5 @@ task validatePublishing {
     }
 }
 
-bintrayUpload.dependsOn validatePublishing
+//bintrayUpload.dependsOn validatePublishing
+//publishMiraklePublicationPublicationToMavenLocal

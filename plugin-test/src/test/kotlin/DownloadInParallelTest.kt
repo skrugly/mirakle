@@ -1,4 +1,4 @@
-import com.instamotor.BuildConfig
+import com.instamotor.mirakle.BuildConfig
 import org.gradle.testkit.runner.GradleRunner
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe

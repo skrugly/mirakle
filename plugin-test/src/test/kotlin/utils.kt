@@ -1,4 +1,4 @@
-import com.instamotor.BuildConfig
+import com.instamotor.mirakle.BuildConfig
 import org.gradle.internal.impldep.org.junit.rules.TemporaryFolder
 import org.gradle.testkit.runner.*
 import org.jetbrains.spek.api.dsl.SpecBody
