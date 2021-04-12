@@ -31,7 +31,6 @@ class MirakleBenchmark : Plugin<Gradle> {
         gradle.startParameter.apply {
             setTaskNames(listOf("mirakleBenchmark"))
             setExcludedTaskNames(listOf("mirakle"))
-            useEmptySettings()
 
             buildFile = File(originalStartParams.currentDir, "mirakle.gradle").takeIf(File::exists)
                     ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
