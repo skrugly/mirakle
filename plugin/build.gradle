@@ -5,6 +5,15 @@ apply plugin: 'maven-publish'
 //apply plugin: 'com.jfrog.bintray'
 
 
+compileKotlin {
+    kotlinOptions {
+        useIR = true
+        jvmTarget = "1.8"
+        languageVersion = "1.4"
+        freeCompilerArgs += ["-Xno-optimized-callable-references",]
+    }
+}
+
 repositories {
     mavenCentral()
 }
