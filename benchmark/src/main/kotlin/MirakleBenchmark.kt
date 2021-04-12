@@ -1,3 +1,4 @@
+import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -49,7 +50,7 @@ class MirakleBenchmark : Plugin<Gradle> {
                 if (benchmarkConfig.launchNumber == null) throw IllegalArgumentException("Mirakle benchmark launch number is not defined.")
                 if (benchmarkConfig.resultsFolder == null) throw IllegalArgumentException("Mirakle benchmark results folder is not defined.")
 
-                project.task<AbstractTask>("mirakleBenchmark") {
+                project.task<DefaultTask>("mirakleBenchmark") {
                     doFirst {
                         val resultsRoot = File("${benchmarkConfig.resultsFolder}/${benchmarkConfig.name}")
 
