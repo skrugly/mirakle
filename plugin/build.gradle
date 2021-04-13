@@ -1,10 +1,6 @@
 group rootProject.group
 version rootProject.version
 
-apply plugin: 'maven-publish'
-//apply plugin: 'com.jfrog.bintray'
-
-
 compileKotlin {
     kotlinOptions {
         useIR = true
@@ -45,13 +41,25 @@ def pomConfig = {
 }
 
 publishing {
+    repositories {
+        maven {
+            credentials {
+                username = "$ossrhUsername"
+                password = "$ossrhPassword"
+            }
+
+            //"https://s01.oss.sonatype.org/service/local/"
+            url  = "https://s01.oss.sonatype.org/content/repositories/releases/"
+        }
+    }
+
     publications {
         MiraklePublication(MavenPublication) {
             from components.java
 
             artifact sourcesJar
 
-            groupId 'com.instamotor'
+            groupId 'io.github.adambl4'
             artifactId 'mirakle'
             version rootProject.version
 
@@ -59,36 +67,16 @@ publishing {
                 def root = asNode()
                 root.appendNode('description', 'Gradle plugin to move build process from local to a remote machine.')
                 root.appendNode('name', 'Mirakle')
-                root.appendNode('url', 'https://github.com/Instamotor-Labs/mirakle')
+                root.appendNode('url', 'https://github.com/adambl4/mirakle')
                 root.children().last() + pomConfig
             }
         }
     }
 }
 
-/*bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_API_KEY')
-    publish = true
-
-    pkg {
-        repo = 'maven'
-        name = 'mirakle'
-        licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/Instamotor-Labs/mirakle.git'
-        issueTrackerUrl = 'https://github.com/Instamotor-Labs/mirakle/issues'
-        publications = ['MiraklePublication']
-
-        version {
-            name = rootProject.version
-
-            *//*gpg { //TODO
-                sign = true
-                passphrase = System.getenv('BINTRAY_GPG_PASSPHRASE')
-            }*//*
-        }
-    }
-}*/
+signing {
+    sign publishing.publications.MiraklePublication
+}
 
 task validatePublishing {
     doLast {
@@ -99,5 +87,4 @@ task validatePublishing {
     }
 }
 
-//bintrayUpload.dependsOn validatePublishing
-//publishMiraklePublicationPublicationToMavenLocal
+publish.dependsOn validatePublishing
