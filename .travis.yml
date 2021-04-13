@@ -7,7 +7,7 @@ before_install:
   - chmod +x .travis-ssh.sh
 script:
   - ./.travis-ssh.sh
-  - ./gradlew mirakle:build mirakle:install plugin-test:test
+  - ./gradlew mirakle:build mirakle:publishMiraklePublicationPublicationToMavenLocal plugin-test:test
 cache:
   directories:
     - '$HOME/.m2/repository'

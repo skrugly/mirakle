@@ -1,8 +1,9 @@
 import com.googlecode.streamflyer.core.ModifyingWriter
 import com.googlecode.streamflyer.regex.fast.FastRegexModifier
-import com.instamotor.BuildConfig
+import com.instamotor.mirakle.BuildConfig
 import org.apache.commons.io.output.WriterOutputStream
 import org.gradle.StartParameter
+import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
@@ -56,7 +57,6 @@ open class Mirakle : Plugin<Gradle> {
                 setExcludedTaskNames(emptyList())
             }
             if (!breakMode) {
-                useEmptySettings()
                 buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
                         ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
                         File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
@@ -188,7 +188,7 @@ open class Mirakle : Plugin<Gradle> {
                         execute.execResult!!.assertNormalExitValue()
                     }
                 } else {
-                    val fallback = project.task<AbstractTask>("fallback") {
+                    val fallback = project.task<DefaultTask>("fallback") {
                         onlyIf { upload.execResult!!.exitValue != 0 }
 
                         doFirst {
