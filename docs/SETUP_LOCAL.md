@@ -36,13 +36,13 @@
   * `ControlMaster` enables SSH connection reusage.
   * `ControlPersist` specifies for how long SSH should keep connection open.
 
-3. Copy and send public key to a person responsible for remote machine maintenance.
+3. Copy and append public key to `~/.ssh/authorized_keys` on remote machine or send public key to a person responsible for remote machine maintenance.
 
   ```shell
   # macOS-specific. Linux users, you know what to do.
   $ pbcopy < ~/.ssh/{SSH_KEY_NAME}.pub
   ```
-
+  
 4. Once you’ve received confirmation that remote machine is ready for you, try the connection.
 
   ```
