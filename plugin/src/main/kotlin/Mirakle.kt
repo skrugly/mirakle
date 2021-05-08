@@ -2,9 +2,11 @@ import com.googlecode.streamflyer.core.ModifyingWriter
 import com.googlecode.streamflyer.regex.fast.FastRegexModifier
 import com.instamotor.mirakle.BuildConfig
 import org.apache.commons.io.output.WriterOutputStream
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.StartParameter
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
+import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.internal.AbstractTask
@@ -12,6 +14,7 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
 import org.gradle.api.logging.configuration.ShowStacktrace
+import org.gradle.api.tasks.AbstractExecTask
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.TaskState
 import org.gradle.process.internal.ExecAction
@@ -28,6 +31,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 import javax.inject.Inject
+import kotlin.reflect.KClass
 
 open class Mirakle : Plugin<Gradle> {
     override fun apply(gradle: Gradle) {
@@ -89,63 +93,70 @@ open class Mirakle : Plugin<Gradle> {
                 val breakTaskFromCLI = startParamsCopy.projectProperties[BREAK_TASK]
                 val breakOnTasks = breakTaskFromCLI?.takeIf(String::isNotBlank)?.let(::listOf) ?: config.breakOnTasks
 
-                val upload = project.task<Exec>("uploadToRemote") {
-                    setCommandLine("rsync")
-                    args(
-                            fixPathForWindows(project.rootDir.toString()),
-                            "${config.host}:${config.remoteFolder}",
-                            "--rsh",
-                            "ssh ${config.sshArgs.joinToString(separator = " ")}",
-                            "--exclude=mirakle.gradle"
-                    )
-                    args(config.rsyncToRemoteArgs)
+                val upload = with(config.pathFixer) {
+                    task("uploadToRemote", project) {
+                        setCommandLine("rsync")
+                        args(
+                                localToRemotePathFixer(project.rootDir.toString()),
+                                "${config.host}:${config.remoteFolder}",
+                                "--rsh 'ssh ${config.sshArgs.joinToString(separator = " ")}'",
+                                "--exclude=mirakle.gradle"
+                        )
+                        args(config.rsyncToRemoteArgs)
+                    }
                 }
 
-                val execute = project.task<Exec>("executeOnRemote") {
-                    setCommandLine("ssh")
-                    args(config.sshArgs)
-                    args(
-                            config.host,
-                            "${config.remoteFolder}/\"${project.name}\"/gradlew",
-                            "-P$BUILD_ON_REMOTE=true",
-                            "-p ${config.remoteFolder}/\"${project.name}\""
-                    )
-                    startParamsCopy.copy()
-                            .apply {
-                                if (breakMode && breakOnTasks.isNotEmpty()) {
-                                    // In break mode tasks arguments will be set later when Gradle::taskGraph is ready
-                                    setTaskNames(emptyList())
+                val execute = with(config.pathFixer) {
+                    task("executeOnRemote", project) {
+                        setCommandLine("ssh")
+                        args(config.sshArgs)
+                        args(config.host)
+                        startParamsCopy.copy()
+                                .apply {
+                                    if (breakMode && breakOnTasks.isNotEmpty()) {
+                                        // In break mode tasks arguments will be set later when Gradle::taskGraph is ready
+                                        setTaskNames(emptyList())
+                                    }
                                 }
-                            }
-                            .let(::mergeStartParamsWithProperties)
-                            .let(::startParamsToArgs)
-                            .let(::args)
+                                .let(::mergeStartParamsWithProperties)
+                                .let(::startParamsToArgs)
+                                .let { args ->
+                                    (listOf(
+                                            "${config.remoteFolder}/\"${project.name}\"/gradlew",
+                                            "-P$BUILD_ON_REMOTE=true",
+                                            "-p ${config.remoteFolder}/\"${project.name}\""
+                                    ) + args)
+                                            .joinToString(separator = " ", prefix = "'", postfix = "'")
+                                }
+                                .let { remoteCommandLine -> args(remoteCommandLine) }
 
-                    isIgnoreExitValue = true
+                        isIgnoreExitValue = true
 
-                    standardOutput = modifyOutputStream(
-                            standardOutput ?: System.out,
-                            "${config.remoteFolder}/${project.name}",
-                            project.rootDir.path
-                    )
-                    errorOutput = modifyOutputStream(
-                            errorOutput ?: System.err,
-                            "${config.remoteFolder}/${project.name}",
-                            project.rootDir.path
-                    )
-                }.mustRunAfter(upload) as Exec
+                        standardOutput = modifyOutputStream(
+                                standardOutput ?: System.out,
+                                "${config.remoteFolder}/${project.name}",
+                                localPathFixer(project.rootDir.path)
+                        )
+                        errorOutput = modifyOutputStream(
+                                errorOutput ?: System.err,
+                                "${config.remoteFolder}/${project.name}",
+                                localPathFixer(project.rootDir.path)
+                        )
+                    }.mustRunAfter(upload) as AbstractExecTask<*>
+                }
 
-                val download = project.task<Exec>("downloadFromRemote") {
-                    setCommandLine("rsync")
-                    args(
-                            "${config.host}:${config.remoteFolder}/\"${project.name}\"/",
-                            "./",
-                            "--rsh",
-                            "ssh ${config.sshArgs.joinToString(separator = " ")}",
-                            "--exclude=mirakle.gradle"
-                    )
-                    args(config.rsyncFromRemoteArgs)
-                }.mustRunAfter(execute) as Exec
+                val download = with(config.pathFixer) {
+                    task("downloadFromRemote", project) {
+                        setCommandLine("rsync")
+                        args(
+                                "${config.host}:${config.remoteFolder}/\"${project.name}\"/",
+                                "./",
+                                "--rsh 'ssh ${config.sshArgs.joinToString(separator = " ")}'",
+                                "--exclude=mirakle.gradle"
+                        )
+                        args(config.rsyncFromRemoteArgs)
+                    }.mustRunAfter(execute) as AbstractExecTask<*>
+                }
 
                 if (config.downloadInParallel) {
                     if (config.downloadInterval <= 0) throw MirakleException("downloadInterval must be >0")
@@ -378,6 +389,58 @@ open class MirakleExtension {
     var downloadInterval = 2000L
 
     var breakOnTasks = emptySet<String>()
+
+    var pathFixer = if (Os.isFamily(Os.FAMILY_WINDOWS)) PathFixer.WSL else PathFixer.NONE
+}
+
+enum class PathFixer constructor(
+        val localToRemotePathFixer: (String) -> String,
+        val localPathFixer: (String) -> String = { it },
+        val execTaskType: KClass<out AbstractExecTask<*>> = Exec::class
+) {
+    CYGWIN(localToRemotePathFixer = ::fixPathForСygwin),
+    WSL(
+            localToRemotePathFixer = ::fixPathForWsl,
+            localPathFixer = ::fixWindowsPathSlashes,
+            execTaskType = WslExec::class
+    ),
+    NONE(localToRemotePathFixer = { it })
+    ;
+
+    fun task(
+            name: String,
+            project: Project,
+            configuration: AbstractExecTask<*>.() -> Unit
+    ) =
+            project.tasks.create(name, execTaskType.java, configuration)
+}
+
+open class WslExec : AbstractExecTask<WslExec>(WslExec::class.java) {
+    private val commandLineHolder: MutableList<Any?> = mutableListOf()
+    private val argumentsHolder: MutableList<Any?> = mutableListOf()
+
+    override fun setCommandLine(vararg args: Any?) {
+        commandLineHolder.addAll(args)
+    }
+
+    override fun args(vararg args: Any?): WslExec {
+        argumentsHolder.addAll(args)
+        return this
+    }
+
+    override fun args(args: Iterable<*>): WslExec {
+        argumentsHolder.addAll(args)
+        return this
+    }
+
+    override fun exec() {
+        val command = listOf(commandLineHolder, argumentsHolder)
+                .flatten()
+                .joinToString(separator = " ")
+        super.setCommandLine("bash")
+        super.args("-c", "\"$command\"")
+        super.exec()
+    }
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
@@ -387,8 +450,8 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
             .plus(buildFile?.let { "-b $it" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
             .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
-            .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "\"$key=$value\"") })
-            .plus(systemPropertiesArgs.flatMap { (key, value) -> listOf("--system-prop", "\"$key=$value\"") })
+            .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "\\\"$key=$value\\\"") })
+            .plus(systemPropertiesArgs.flatMap { (key, value) ->listOf("--system-prop", "\\\"$key=$value\\\"")})
             .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
             .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
             .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second)
@@ -457,6 +520,8 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
             excludeLocal = emptySet()
             excludeRemote = emptySet()
 
+            pathFixer = mirakleConfig.pathFixer
+
             Properties().apply {
                 load(config.inputStream())
 
@@ -466,16 +531,16 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
             }
 
             if (commonIgnore != null && commonIgnore.exists()) {
-                rsyncToRemoteArgs += "--exclude-from=${commonIgnore.path}"
-                rsyncFromRemoteArgs += "--exclude-from=${commonIgnore.path}"
+                rsyncToRemoteArgs += "--exclude-from=${pathFixer.localToRemotePathFixer(commonIgnore.path)}"
+                rsyncFromRemoteArgs += "--exclude-from=${pathFixer.localToRemotePathFixer(commonIgnore.path)}"
             }
 
             if (localIgnore != null && localIgnore.exists()) {
-                rsyncToRemoteArgs += "--exclude-from=${localIgnore.path}"
+                rsyncToRemoteArgs += "--exclude-from=${pathFixer.localToRemotePathFixer(localIgnore.path)}"
             }
 
             if (remoteIgnore != null && remoteIgnore.exists()) {
-                rsyncFromRemoteArgs += "--exclude-from=${remoteIgnore.path}"
+                rsyncFromRemoteArgs += "--exclude-from=${pathFixer.localToRemotePathFixer(remoteIgnore.path)}"
             }
 
             // Mainframer doesn't have these config params, use Mirakle's parameters instead
@@ -494,7 +559,12 @@ const val BREAK_MODE = "mirakle.break.mode"
 const val BREAK_TASK = "mirakle.break.task"
 
 //TODO test
-fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
+fun Gradle.supportAndroidStudioAdvancedProfiling(
+        config: MirakleExtension,
+        upload: AbstractExecTask<*>,
+        execute: AbstractExecTask<*>,
+        download: AbstractExecTask<*>
+) {
     if (startParameter.projectProperties.containsKey("android.advanced.profiling.transforms")) {
         println("Android Studio advanced profilling enabled. Profiler files will be uploaded to remote project dir.")
 
