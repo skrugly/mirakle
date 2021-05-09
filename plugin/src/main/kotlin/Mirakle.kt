@@ -377,10 +377,10 @@ open class MirakleExtension {
 
     var breakOnTasks = emptySet<String>()
 
-    fun buildRsyncToRemoteArgs(): Set<String> =
+    internal fun buildRsyncToRemoteArgs(): Set<String> =
         rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
 
-    fun buildRsyncFromRemoteArgs(): Set<String> =
+    internal fun buildRsyncFromRemoteArgs(): Set<String> =
         rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
 
     private fun Set<String>.mapToRsyncExcludeArgs(): Set<String> =
