@@ -2,7 +2,7 @@
 
 1. Build the plugin and install it to local maven repo
     
-    `./gradlew mirakle:build mirakle:install -x mirakle`
+    `./gradlew mirakle:build mirakle:publishMiraklePublicationToMavenLocal -x mirakle`
 2. Add `mavenLocal()` to Mirakle's init script
 
     ```

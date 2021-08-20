@@ -54,7 +54,7 @@ publishing {
     }
 
     publications {
-        MiraklePublication(MavenPublication) {
+        Mirakle(MavenPublication) {
             from components.java
 
             artifact sourcesJar
@@ -75,7 +75,7 @@ publishing {
 }
 
 signing {
-    sign publishing.publications.MiraklePublication
+    sign publishing.publications.Mirakle
 }
 
 task validatePublishing {
