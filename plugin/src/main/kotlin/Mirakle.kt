@@ -7,7 +7,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
-import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.configuration.ConsoleOutput
@@ -150,7 +149,7 @@ open class Mirakle : Plugin<Gradle> {
                 if (config.downloadInParallel) {
                     if (config.downloadInterval <= 0) throw MirakleException("downloadInterval must be >0")
 
-                    val downloadInParallel = project.task<AbstractTask>("downloadInParallel") {
+                    val downloadInParallel = project.task<Task>("downloadInParallel") {
                         doFirst {
                             val downloadExecAction = services.get(ExecActionFactory::class.java).newExecAction().apply {
                                 commandLine = download.commandLine
