@@ -42,6 +42,9 @@ open class Mirakle : Plugin<Gradle> {
 
         gradle.assertNonSupportedFeatures()
 
+        val gradlewRoot = findGradlewRoot(gradle.startParameter.currentDir)
+                ?: throw MirakleException("gradlew executable file is not found.")
+
         val startParamsCopy = gradle.startParameter.copy()
         val breakMode = startParamsCopy.projectProperties.let {
             (it[BREAK_MODE]?.toBoolean() ?: false) || (it[BREAK_TASK]?.isNotBlank() ?: false)
@@ -56,14 +59,14 @@ open class Mirakle : Plugin<Gradle> {
                 setExcludedTaskNames(emptyList())
             }
             if (!breakMode) {
-                buildFile = File(startParamsCopy.currentDir, "mirakle.gradle").takeIf(File::exists)
+                buildFile = File(gradlewRoot, "mirakle.gradle").takeIf(File::exists)
                         ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
-                        File(startParamsCopy.currentDir, "mirakle_build_file_stub").also { stub ->
-                            stub.createNewFile()
-                            gradle.rootProject { it.afterEvaluate { stub.delete() } }
-                        }
+                                File(gradlewRoot, "mirakle_build_file_stub").also { stub ->
+                                    stub.createNewFile()
+                                    gradle.rootProject { it.afterEvaluate { stub.delete() } }
+                                }
             } else {
-                if (File(startParamsCopy.currentDir, "mirakle.gradle").exists()) {
+                if (File(gradlewRoot, "mirakle.gradle").exists()) {
                     gradle.apply(mutableMapOf("from" to "mirakle.gradle"))
                 }
             }
@@ -76,7 +79,7 @@ open class Mirakle : Plugin<Gradle> {
                 val config = kotlin.run {
                     val mirakleConfig = project.extensions.getByType(MirakleExtension::class.java)
 
-                    getMainframerConfigOrNull(project.rootDir, mirakleConfig)?.also {
+                    getMainframerConfigOrNull(gradlewRoot, mirakleConfig)?.also {
                         println("Mainframer config is applied, Mirakle config is ignored.")
                     } ?: mirakleConfig
                 }
@@ -91,7 +94,7 @@ open class Mirakle : Plugin<Gradle> {
                 val upload = project.task<Exec>("uploadToRemote") {
                     setCommandLine("rsync")
                     args(
-                            fixPathForWindows(project.rootDir.toString()),
+                            fixPathForWindows(gradlewRoot.toString()),
                             "${config.host}:${config.remoteFolder}",
                             "--rsh",
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
@@ -125,12 +128,12 @@ open class Mirakle : Plugin<Gradle> {
                     standardOutput = modifyOutputStream(
                             standardOutput ?: System.out,
                             "${config.remoteFolder}/${project.name}",
-                            project.rootDir.path
+                            gradlewRoot.path
                     )
                     errorOutput = modifyOutputStream(
                             errorOutput ?: System.err,
                             "${config.remoteFolder}/${project.name}",
-                            project.rootDir.path
+                            gradlewRoot.path
                     )
                 }.mustRunAfter(upload) as Exec
 
@@ -258,7 +261,7 @@ open class Mirakle : Plugin<Gradle> {
 
                                     if (inputs.files.files.isNotEmpty()) {
                                         val inputsNotInProjectDir = inputs.files.files.filter {
-                                            !it.path.startsWith(project.rootDir.path)
+                                            !it.path.startsWith(gradlewRoot.path)
                                         }
 
                                         if (inputsNotInProjectDir.isNotEmpty()) {
@@ -268,7 +271,7 @@ open class Mirakle : Plugin<Gradle> {
 
                                         // Need to include all of the parent directories down to the desired directory
                                         val includeRules = inputs.files.files.map { file ->
-                                            val pathToInclude = file.path.substringAfter(project.rootDir.path).drop(1)
+                                            val pathToInclude = file.path.substringAfter(gradlewRoot.path).drop(1)
                                             val split = pathToInclude.split("/")
 
                                             (1 until split.size).mapIndexed { _, i ->
@@ -287,7 +290,7 @@ open class Mirakle : Plugin<Gradle> {
 
                                         //val excludeAllRule = "--exclude=/**" // TODO does it make sense to exclude all except the inputs?
 
-                                        download.setArgs(includeRules /*+ excludeAllRule */+ download.args!!.toList())
+                                        download.setArgs(includeRules /*+ excludeAllRule */ + download.args!!.toList())
                                     }
                                 }
 

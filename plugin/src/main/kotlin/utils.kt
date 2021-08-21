@@ -11,6 +11,7 @@ import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
+import java.io.File
 
 fun Gradle.logTasks(tasks: List<Task>) = logTasks(*tasks.toTypedArray())
 
@@ -111,4 +112,13 @@ fun fixPathForWindows(path: String) = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
 fun StartParameter.copy() = newInstance().also { copy ->
     copy.isBuildScan = this.isBuildScan
     copy.isNoBuildScan = this.isNoBuildScan
+}
+
+fun findGradlewRoot(root: File): File? {
+    val gradlew = File(root, "gradlew")
+    return if (gradlew.exists()) {
+        gradlew.parentFile
+    } else {
+        root.parentFile?.let(::findGradlewRoot)
+    }
 }
