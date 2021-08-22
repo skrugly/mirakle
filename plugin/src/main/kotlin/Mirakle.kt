@@ -119,7 +119,7 @@ open class Mirakle : Plugin<Gradle> {
                                     setTaskNames(emptyList())
                                 }
                             }
-                            .let(::mergeStartParamsWithProperties)
+                            .let { mergeStartParamsWithProperties(it, gradlewRoot) }
                             .let(::startParamsToArgs)
                             .let(::args)
 
@@ -380,13 +380,13 @@ open class MirakleExtension {
     var breakOnTasks = emptySet<String>()
 
     internal fun buildRsyncToRemoteArgs(): Set<String> =
-        rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
+            rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
 
     internal fun buildRsyncFromRemoteArgs(): Set<String> =
-        rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
+            rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
 
     private fun Set<String>.mapToRsyncExcludeArgs(): Set<String> =
-        this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
+            this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
@@ -583,11 +583,10 @@ class DownloadInParallelWorker @Inject constructor(val downloadInterval: Long) :
 *   2. args from CLI
 *   3. GRADLE_USER_HOME/gradle.properties
 * */
-fun mergeStartParamsWithProperties(startParameter: StartParameter): StartParameter {
-    fun loadPropertiesIfExist(file: File) = file.takeIf(File::exists)?.let {
-        Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
-    } ?: emptyMap()
-
+fun mergeStartParamsWithProperties(
+        startParameter: StartParameter,
+        gradlewRoot: File
+): StartParameter {
     fun addPropertiesToStartParams(properties: Map<String, String>, startParameter: StartParameter) {
         properties.onEach { (key, value) ->
             if (key.startsWith("systemProp.")) {
@@ -598,9 +597,9 @@ fun mergeStartParamsWithProperties(startParameter: StartParameter): StartParamet
         }
     }
 
-    val mirakleProperties = loadPropertiesIfExist(File(startParameter.currentDir, "mirakle.properties"))
-    val mirakleLocalProperties = loadPropertiesIfExist(File(startParameter.currentDir, "mirakle_local.properties"))
-    val gradleHomeDirProperties = loadPropertiesIfExist(File(startParameter.gradleUserHomeDir, "gradle.properties"))
+    val mirakleProperties = loadProperties(File(gradlewRoot, "mirakle.properties"))
+    val mirakleLocalProperties = loadProperties(File(gradlewRoot, "mirakle_local.properties"))
+    val gradleHomeDirProperties = loadProperties(File(startParameter.gradleUserHomeDir, "gradle.properties"))
 
     return startParameter.copy().apply {
         projectProperties = mutableMapOf()

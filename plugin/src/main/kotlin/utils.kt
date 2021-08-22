@@ -12,6 +12,7 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
 import java.io.File
+import java.util.*
 
 fun Gradle.logTasks(tasks: List<Task>) = logTasks(*tasks.toTypedArray())
 
@@ -122,3 +123,7 @@ fun findGradlewRoot(root: File): File? {
         root.parentFile?.let(::findGradlewRoot)
     }
 }
+
+fun loadProperties(file: File) = file.takeIf(File::exists)?.let {
+    Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
+} ?: emptyMap()
