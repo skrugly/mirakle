@@ -38,12 +38,14 @@ open class Mirakle : Plugin<Gradle> {
         if (gradle.startParameter.excludedTaskNames.remove("mirakle")) return
         if (gradle.startParameter.isDryRun) return
 
-        val startTime = System.currentTimeMillis()
+        val gradlewRoot = findGradlewRoot(gradle.startParameter.currentDir)
+                ?: throw MirakleException("gradlew executable file is not found.")
+
+        if (loadProperties(File(gradlewRoot, "local.properties"))["mirakle.enabled"] == "false") return
 
         gradle.assertNonSupportedFeatures()
 
-        val gradlewRoot = findGradlewRoot(gradle.startParameter.currentDir)
-                ?: throw MirakleException("gradlew executable file is not found.")
+        val startTime = System.currentTimeMillis()
 
         val startParamsCopy = gradle.startParameter.copy()
         val breakMode = startParamsCopy.projectProperties.let {
