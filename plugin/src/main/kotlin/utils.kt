@@ -11,6 +11,8 @@ import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
+import java.io.File
+import java.util.*
 
 fun Gradle.logTasks(tasks: List<Task>) = logTasks(*tasks.toTypedArray())
 
@@ -112,3 +114,16 @@ fun StartParameter.copy() = newInstance().also { copy ->
     copy.isBuildScan = this.isBuildScan
     copy.isNoBuildScan = this.isNoBuildScan
 }
+
+fun findGradlewRoot(root: File): File? {
+    val gradlew = File(root, "gradlew")
+    return if (gradlew.exists()) {
+        gradlew.parentFile
+    } else {
+        root.parentFile?.let(::findGradlewRoot)
+    }
+}
+
+fun loadProperties(file: File) = file.takeIf(File::exists)?.let {
+    Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
+} ?: emptyMap()
