@@ -4,14 +4,15 @@ import org.gradle.BuildAdapter
 import org.gradle.BuildResult
 import org.gradle.api.GradleException
 import org.gradle.StartParameter
+import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionListener
-import org.gradle.api.internal.AbstractTask
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
 import java.io.File
+import java.lang.reflect.Field
 import java.util.*
 
 fun Gradle.logTasks(tasks: List<Task>) = logTasks(*tasks.toTypedArray())
@@ -93,9 +94,22 @@ class KotlinClosure1<in T : Any, V : Any>(
 
 val Task.services: ServiceRegistry
     get() {
-        val field = AbstractTask::class.java.getDeclaredField("services")
-        field.isAccessible = true
-        return field.get(this) as ServiceRegistry
+        try {
+            fun findField(java: Class<*>, field: String): Field {
+                return try {
+                    java.getDeclaredField(field)
+                } catch (e: NoSuchFieldException) {
+                    java.superclass?.let { findField(it, field) } ?: throw e
+                }
+            }
+
+            val field = findField(DefaultTask::class.java, "services")
+            field.isAccessible = true
+            return field.get(this) as ServiceRegistry
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            throw e
+        }
     }
 
 fun Task.isMirakleTask() = name == "mirakle" || name == "uploadToRemote" || name == "executeOnRemote" || name == "downloadFromRemote" || name == "downloadInParallel" || name == "fallback"

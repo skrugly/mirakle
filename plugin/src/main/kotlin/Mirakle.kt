@@ -60,18 +60,37 @@ open class Mirakle : Plugin<Gradle> {
                 setTaskNames(listOf("mirakle"))
                 setExcludedTaskNames(emptyList())
             }
+
             if (!breakMode) {
-                buildFile = File(gradlewRoot, "mirakle.gradle").takeIf(File::exists)
-                        ?: //a way to make Gradle not evaluate project's default build.gradle file on local machine
-                                File(gradlewRoot, "mirakle_build_file_stub").also { stub ->
-                                    stub.createNewFile()
-                                    gradle.rootProject { it.afterEvaluate { stub.delete() } }
-                                }
-            } else {
-                if (File(gradlewRoot, "mirakle.gradle").exists()) {
-                    gradle.apply(mutableMapOf("from" to "mirakle.gradle"))
+                //a way to make Gradle not evaluate build.gradle and settings.gradle on local machine
+
+                val settingsFile = gradlewRoot.listFiles().firstOrNull { it.name.startsWith("settings.gradle") }
+                val settingsBackup = settingsFile?.let { File(gradlewRoot, "backup_${it.name}") }
+
+                val buildFile = gradlewRoot.listFiles().firstOrNull { it.name.startsWith("build.gradle") }
+                val buildFileBackup = buildFile?.let { File(gradlewRoot, "backup_${it.name}") }
+
+                settingsFile?.renameTo(settingsBackup)
+                buildFile?.renameTo(buildFileBackup)
+
+                gradle.rootProject {
+                    it.afterEvaluate {
+                        settingsFile?.let {
+                            settingsBackup?.renameTo(it)
+                        }
+
+                        buildFile?.let {
+                            buildFileBackup?.renameTo(it)
+                        }
+                    }
                 }
             }
+
+            // mirakle.gradle is the only Gradle build file which is evaluated on local machine.
+            if (File(gradlewRoot, "mirakle.gradle").exists()) {
+                gradle.apply(mutableMapOf("from" to "mirakle.gradle"))
+            }
+
             // disable build scan on local machine, but it will be enabled on remote if flag is set
             isBuildScan = false
         }
@@ -175,7 +194,7 @@ open class Mirakle : Plugin<Gradle> {
                         }
 
                         onlyIf {
-                            config.downloadInParallel && upload.execResult!!.exitValue == 0 && !execute.didWork
+                            config.downloadInParallel && upload.executionResult.get().exitValue == 0 && !execute.didWork
                         }
                     }
 
@@ -189,11 +208,11 @@ open class Mirakle : Plugin<Gradle> {
 
                 if (!config.fallback) {
                     mirakle.doLast {
-                        execute.execResult!!.assertNormalExitValue()
+                        execute.executionResult.get().assertNormalExitValue()
                     }
                 } else {
                     val fallback = project.task<DefaultTask>("fallback") {
-                        onlyIf { upload.execResult!!.exitValue != 0 }
+                        onlyIf { upload.executionResult.get().exitValue != 0 }
 
                         doFirst {
                             println("Upload to remote failed. Continuing with fallback.")
@@ -216,12 +235,12 @@ open class Mirakle : Plugin<Gradle> {
                     upload.isIgnoreExitValue = true
                     upload.finalizedBy(fallback)
 
-                    execute.onlyIf { upload.execResult!!.exitValue == 0 }
-                    download.onlyIf { upload.execResult!!.exitValue == 0 }
+                    execute.onlyIf { upload.executionResult.get().exitValue == 0 }
+                    download.onlyIf { upload.executionResult.get().exitValue == 0 }
 
                     mirakle.doLast {
                         if (execute.didWork) {
-                            execute.execResult!!.assertNormalExitValue()
+                            execute.executionResult.get().assertNormalExitValue()
                         }
                     }
                 }
@@ -259,7 +278,7 @@ open class Mirakle : Plugin<Gradle> {
                                 breakTask.apply {
                                     enabled = true
                                     mustRunAfter(download)
-                                    onlyIf { execute.didWork && execute.execResult!!.exitValue == 0 }
+                                    onlyIf { execute.didWork && execute.executionResult.get().exitValue == 0 }
 
                                     if (inputs.files.files.isNotEmpty()) {
                                         val inputsNotInProjectDir = inputs.files.files.filter {
@@ -395,7 +414,6 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
     emptyList<String>()
             .plus(taskNames.minus("mirakle"))
             .plus(excludedTaskNames.map { "--exclude-task $it" })
-            .plus(buildFile?.let { "-b $it" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
             .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
             .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "\"$key=$value\"") })
