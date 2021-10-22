@@ -131,9 +131,9 @@ open class Mirakle : Plugin<Gradle> {
                     args(config.sshArgs)
                     args(
                             config.host,
-                            "${config.remoteFolder}/\"${project.name}\"/gradlew",
+                            "${config.remoteFolder}/\"${gradlewRoot.name}\"/gradlew",
                             "-P$BUILD_ON_REMOTE=true",
-                            "-p ${config.remoteFolder}/\"${project.name}\""
+                            "-p ${config.remoteFolder}/\"${gradlewRoot.name}\""
                     )
                     startParamsCopy.copy()
                             .apply {
@@ -150,12 +150,12 @@ open class Mirakle : Plugin<Gradle> {
 
                     standardOutput = modifyOutputStream(
                             standardOutput ?: System.out,
-                            "${config.remoteFolder}/${project.name}",
+                            "${config.remoteFolder}/${gradlewRoot.name}",
                             gradlewRoot.path
                     )
                     errorOutput = modifyOutputStream(
                             errorOutput ?: System.err,
-                            "${config.remoteFolder}/${project.name}",
+                            "${config.remoteFolder}/${gradlewRoot.name}",
                             gradlewRoot.path
                     )
                 }.mustRunAfter(upload) as Exec
@@ -163,7 +163,7 @@ open class Mirakle : Plugin<Gradle> {
                 val download = project.task<Exec>("downloadFromRemote") {
                     setCommandLine("rsync")
                     args(
-                            "${config.host}:${config.remoteFolder}/\"${project.name}\"/",
+                            "${config.host}:${config.remoteFolder}/\"${gradlewRoot.name}\"/",
                             "./",
                             "--rsh",
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
