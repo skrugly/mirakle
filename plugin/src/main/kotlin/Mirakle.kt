@@ -46,7 +46,7 @@ open class Mirakle : Plugin<Gradle> {
         gradle.assertNonSupportedFeatures()
 
         val startTime = System.currentTimeMillis()
-
+        
         val startParamsCopy = gradle.startParameter.copy()
         val breakMode = startParamsCopy.projectProperties.let {
             (it[BREAK_MODE]?.toBoolean() ?: false) || (it[BREAK_TASK]?.isNotBlank() ?: false)
@@ -340,6 +340,7 @@ open class Mirakle : Plugin<Gradle> {
                 }
 
                 gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
+                gradle.uploadInitScripts(upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
                 gradle.logBuild(startTime)
@@ -521,6 +522,40 @@ const val BUILD_ON_REMOTE = "mirakle.build.on.remote"
 const val FALLBACK = "mirakle.build.fallback"
 const val BREAK_MODE = "mirakle.break.mode"
 const val BREAK_TASK = "mirakle.break.task"
+
+
+fun Gradle.uploadInitScripts(upload: Exec, execute: Exec, download: Exec) {
+    if (startParameter.initScripts.isEmpty()) return
+
+    val initScriptsFolder  = File(gradle.rootProject.rootDir, "mirakle_init_scripts")
+    initScriptsFolder.mkdirs()
+
+    startParameter.initScripts.forEach { script ->
+        val initScriptCopy = File(initScriptsFolder, script.name)
+
+        if (initScriptCopy.exists()) initScriptCopy.delete()
+
+        upload.doFirst {
+            Files.copy(script.toPath(), initScriptCopy.toPath())
+        }
+
+        execute.doFirst {
+            execute.args = execute.args!!.apply {
+                add("--init-script ${initScriptsFolder.name}/${initScriptCopy.name}")
+            }
+        }
+    }
+
+    upload.doLast {
+        if (initScriptsFolder.exists())  {
+            initScriptsFolder.deleteRecursively()
+        }
+    }
+
+    download.doFirst {
+        download.args("--exclude=**/${initScriptsFolder.name}/")
+    }
+}
 
 //TODO test
 fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
