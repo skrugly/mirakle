@@ -88,7 +88,9 @@ open class Mirakle : Plugin<Gradle> {
 
             // mirakle.gradle is the only Gradle build file which is evaluated on local machine.
             if (File(gradlewRoot, "mirakle.gradle").exists()) {
-                gradle.apply(mutableMapOf("from" to "mirakle.gradle"))
+                gradle.rootProject { project ->
+                    project.apply(mutableMapOf("from" to "mirakle.gradle"))
+                }
             }
 
             // disable build scan on local machine, but it will be enabled on remote if flag is set
@@ -343,7 +345,7 @@ open class Mirakle : Plugin<Gradle> {
                 gradle.uploadInitScripts(upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
-                gradle.logBuild(startTime)
+                gradle.logBuild(startTime, mirakle)
             }
         }
     }
