@@ -19,9 +19,8 @@ import org.gradle.process.internal.ExecException
 import org.gradle.tooling.GradleConnector
 import org.gradle.workers.IsolationMode
 import org.gradle.workers.WorkerExecutor
-import java.io.File
-import java.io.OutputStream
-import java.io.OutputStreamWriter
+import java.io.*
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -46,7 +45,7 @@ open class Mirakle : Plugin<Gradle> {
         gradle.assertNonSupportedFeatures()
 
         val startTime = System.currentTimeMillis()
-        
+
         val startParamsCopy = gradle.startParameter.copy()
         val breakMode = startParamsCopy.projectProperties.let {
             (it[BREAK_MODE]?.toBoolean() ?: false) || (it[BREAK_TASK]?.isNotBlank() ?: false)
@@ -160,16 +159,22 @@ open class Mirakle : Plugin<Gradle> {
 
                     isIgnoreExitValue = true
 
-                    standardOutput = modifyOutputStream(
+                    val modifiedOut = modifyOutputStream(
                             standardOutput ?: System.out,
                             "${config.remoteFolder}/${gradlewRoot.name}",
-                            gradlewRoot.path
+                            gradlewRoot.path,
                     )
-                    errorOutput = modifyOutputStream(
+
+                    val modifiedErr = modifyOutputStream(
                             errorOutput ?: System.err,
                             "${config.remoteFolder}/${gradlewRoot.name}",
-                            gradlewRoot.path
+                            gradlewRoot.path,
                     )
+
+                    val (std, err) = synchronizeStdoutAndStderr(modifiedOut, modifiedErr)
+
+                    standardOutput = std
+                    errorOutput = err
                 }.mustRunAfter(upload) as Exec
 
                 val download = project.task<Exec>("downloadFromRemote") {
@@ -479,11 +484,32 @@ val consoleOutputToOption = listOf(
 
 //since build occurs on a remote machine, console output will contain remote directories
 //to let IDE and other tools properly parse the output, mirakle need to replace remote dir by local one
-fun modifyOutputStream(target: OutputStream, remoteDir: String, localDir: String): OutputStream {
+fun modifyOutputStream(
+        target: OutputStream,
+        remoteDir: String,
+        localDir: String,
+): OutputStream {
     val modifier = FastRegexModifier("\\/.*?\\/${remoteDir.replace("~/", "")}", 0, localDir, 0, 1)
     val modifyingWriter = ModifyingWriter(OutputStreamWriter(target), modifier)
-    return WriterOutputStream(modifyingWriter)
+    return WriterOutputStream(modifyingWriter, Charset.defaultCharset(), 1024, true)
 }
+
+// print error output strictly at the end of stdout to avoid stream mixing
+fun synchronizeStdoutAndStderr(
+        stdout: OutputStream,
+        stderr: OutputStream
+): Pair<OutputStream, OutputStream> {
+    val errWriter = StringWriter()
+
+    val stdoutWrapped = CallbackOnCloseOutputStream(stdout) {
+        stderr.write(errWriter.buffer.toString().toByteArray())
+        stderr.flush()
+        stderr.close()
+    }
+
+    return stdoutWrapped to WriterOutputStream(errWriter)
+}
+
 
 fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension): MirakleExtension? {
     val mainframerDir = File(projectDir, ".mainframer")
@@ -541,7 +567,7 @@ const val BREAK_TASK = "mirakle.break.task"
 fun Gradle.uploadInitScripts(upload: Exec, execute: Exec, download: Exec) {
     if (startParameter.initScripts.isEmpty()) return
 
-    val initScriptsFolder  = File(gradle.rootProject.rootDir, "mirakle_init_scripts")
+    val initScriptsFolder = File(gradle.rootProject.rootDir, "mirakle_init_scripts")
     initScriptsFolder.mkdirs()
 
     startParameter.initScripts.forEach { script ->
@@ -561,7 +587,7 @@ fun Gradle.uploadInitScripts(upload: Exec, execute: Exec, download: Exec) {
     }
 
     upload.doLast {
-        if (initScriptsFolder.exists())  {
+        if (initScriptsFolder.exists()) {
             initScriptsFolder.deleteRecursively()
         }
     }

@@ -12,6 +12,7 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
 import java.io.File
+import java.io.OutputStream
 import java.lang.reflect.Field
 import java.util.*
 
@@ -98,6 +99,11 @@ val Task.services: ServiceRegistry
 
 fun Task.isMirakleTask() = name == "mirakle" || name == "uploadToRemote" || name == "executeOnRemote" || name == "downloadFromRemote" || name == "downloadInParallel" || name == "fallback"
 
+fun Task.isMirakleTask2() =  when(name) {
+    "mirakle", "uploadToRemote", "executeOnRemote", "downloadFromRemote",  "downloadInParallel", "fallback" -> true
+    else -> false
+}
+
 /*
 * On Windows rsync is used under Cygwin environment
 * and classical Windows path "C:\Users" must be replaced by "/cygdrive/c/Users"
@@ -147,4 +153,30 @@ fun Gradle.afterMirakleEvaluate(callback: () -> Unit) {
             }
         }
     })
+}
+
+class CallbackOnCloseOutputStream(
+        private val delegate: OutputStream,
+        private val callback: () -> Unit,
+) : OutputStream() {
+    override fun write(b: Int) {
+        delegate.write(b)
+    }
+
+    override fun write(b: ByteArray) {
+        delegate.write(b)
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        delegate.write(b, off, len)
+    }
+
+    override fun flush() {
+        delegate.flush()
+    }
+
+    override fun close() {
+        delegate.close()
+        callback()
+    }
 }
