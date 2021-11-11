@@ -5,9 +5,14 @@ compileKotlin {
     kotlinOptions {
         useIR = true
         jvmTarget = "1.8"
-        languageVersion = "1.4"
+        languageVersion = "1.5"
         freeCompilerArgs += ["-Xno-optimized-callable-references",]
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 repositories {
@@ -15,10 +20,10 @@ repositories {
 }
 
 dependencies {
-    compile gradleApi()
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile 'com.googlecode.streamflyer:streamflyer-core:1.1.3'
-    compile 'com.googlecode.streamflyer-regex-fast:streamflyer-regex-fast:1.0.1'
+    implementation gradleApi()
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'com.googlecode.streamflyer:streamflyer-core:1.1.3'
+    implementation 'com.googlecode.streamflyer-regex-fast:streamflyer-regex-fast:1.0.1'
 }
 
 sourceSets {
