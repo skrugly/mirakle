@@ -62,26 +62,38 @@ open class Mirakle : Plugin<Gradle> {
             }
 
             if (!breakMode) {
-                //a way to make Gradle not evaluate build.gradle and settings.gradle on local machine
+                //a way to make Gradle not evaluate build.gradle, settings.gradle and dependency catalog files on local machine
 
-                val settingsFile = gradlewRoot.listFiles().firstOrNull { it.name.startsWith("settings.gradle") }
+                val settingsFile = gradlewRoot.listFiles()?.firstOrNull { it.name.startsWith("settings.gradle") }
                 val settingsBackup = settingsFile?.let { File(gradlewRoot, "backup_${it.name}") }
 
-                val buildFile = gradlewRoot.listFiles().firstOrNull { it.name.startsWith("build.gradle") }
+                val buildFile = gradlewRoot.listFiles()?.firstOrNull { it.name.startsWith("build.gradle") }
                 val buildFileBackup = buildFile?.let { File(gradlewRoot, "backup_${it.name}") }
+
+                val versionCatalog = File(gradlewRoot, "gradle").listFiles()?.filter {
+                    it.name.endsWith("versions.toml")
+                }
 
                 settingsFile?.renameTo(settingsBackup)
                 buildFile?.renameTo(buildFileBackup)
 
-                gradle.rootProject {
-                    it.afterEvaluate {
-                        settingsFile?.let {
-                            settingsBackup?.renameTo(it)
-                        }
+                val versionCatalogBackup = versionCatalog?.map {
+                    val backup = File(it.parent, "${it.name}_backup")
+                    it.renameTo(backup)
+                    backup
+                }
 
-                        buildFile?.let {
-                            buildFileBackup?.renameTo(it)
-                        }
+                gradle.afterMirakleEvaluate {
+                    settingsFile?.let {
+                        settingsBackup?.renameTo(it)
+                    }
+
+                    buildFile?.let {
+                        buildFileBackup?.renameTo(it)
+                    }
+
+                    versionCatalogBackup?.zip(versionCatalog)?.forEach { (backup, original) ->
+                        backup.renameTo(original)
                     }
                 }
             }

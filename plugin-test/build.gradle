@@ -24,12 +24,12 @@ repositories {
 }
 
 dependencies {
-    compile project(":mirakle")
-    testCompile gradleTestKit()
-    testCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile 'org.jetbrains.spek:spek-api:1.1.5'
-    testRuntime "org.junit.platform:junit-platform-launcher:1.0.0"
-    testRuntime 'org.jetbrains.spek:spek-junit-platform-engine:1.1.5'
+    implementation project(":mirakle")
+    testImplementation gradleTestKit()
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation 'org.jetbrains.spek:spek-api:1.1.5'
+    //testRuntime "org.junit.platform:junit-platform-launcher:1.0.0"
+    //testRuntime 'org.jetbrains.spek:spek-junit-platform-engine:1.1.5'
 }

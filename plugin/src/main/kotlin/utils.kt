@@ -1,4 +1,4 @@
-import groovy.lang.Closure
+
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.BuildAdapter
 import org.gradle.BuildResult
@@ -125,3 +125,26 @@ fun findGradlewRoot(root: File): File? {
 fun loadProperties(file: File) = file.takeIf(File::exists)?.let {
     Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
 } ?: emptyMap()
+
+fun Gradle.afterMirakleEvaluate(callback: () -> Unit) {
+    var wasCallback = false
+
+    gradle.rootProject {
+        it.afterEvaluate {
+            if (!wasCallback) {
+                wasCallback = true
+                callback()
+            }
+        }
+    }
+
+    // in case if build failed before project evaluation
+    addBuildListener(object : BuildAdapter() {
+        override fun buildFinished(p0: BuildResult) {
+            if (p0.failure != null && !wasCallback) {
+                wasCallback = true
+                callback()
+            }
+        }
+    })
+}
