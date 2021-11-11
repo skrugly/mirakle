@@ -220,6 +220,12 @@ open class Mirakle : Plugin<Gradle> {
 
                 val mirakle = project.task("mirakle").dependsOn(upload, execute, download)
 
+                try {
+                    mirakle.doNotTrackState("Mirakle is never up-to-date")
+                } catch (ignore: NoSuchMethodError) {
+                    // Gradle <7.3
+                }
+
                 if (!config.fallback) {
                     mirakle.doLast {
                         execute.executionResult.get().assertNormalExitValue()
