@@ -110,7 +110,8 @@ mirakle {
 | rsyncToRemoteArgs  |  `["--archive", "--delete"]`  | Set of rsync arguments that are used when rsync uploads files to remote machine.  |  
 | rsyncFromRemoteArgs  |  `["--archive", "--delete"]` | Set of rsync arguments that are used when rsync downloads files from remote machine.  |
 | sshArgs  |  `[]` | Set of ssh arguments that are used to establish connection with remote machine. |   
-| fallback  | `false`  | If set true mirakle will execute build on local machine when upload to remote failed.  |  
+| sshClient  |  `ssh` | Ssh client implementation, for example Teleport ssh. |
+| fallback  | `false`  | If set true mirakle will execute build on local machine when upload to remote failed.  |
 | downloadInParallel  | `false`  | If set true mirakle will constantly fetch new files from remote machine during "executeOnRemote" phase of build. May result to reduction of total build time.      | 
 | downloadInterval  | `2000`  | Download in parallel interval in mills.  | 
 | breakOnTasks  | `[]`  |  Set of regex patterns of tasks on which remote build should be finished and continued on local machine. [May result in speeding up Android builds.](https://github.com/Adambl4/mirakle/blob/development/docs/TIPS_AND_TRICKS.md#speed-up-android-build-by-breaking-remote-execution-on-package-task)      |

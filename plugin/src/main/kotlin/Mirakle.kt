@@ -139,7 +139,7 @@ open class Mirakle : Plugin<Gradle> {
                 }
 
                 val execute = project.task<Exec>("executeOnRemote") {
-                    setCommandLine("ssh")
+                    setCommandLine(config.sshClient)
                     args(config.sshArgs)
                     args(
                             config.host,
@@ -414,6 +414,8 @@ open class MirakleExtension {
 
     var sshArgs = emptySet<String>()
 
+    var sshClient = "ssh"
+
     var fallback = false
 
     var downloadInParallel = false
@@ -533,6 +535,7 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
             downloadInParallel = mirakleConfig.downloadInParallel
             downloadInterval = mirakleConfig.downloadInterval
             sshArgs = mirakleConfig.sshArgs
+            sshClient = mirakleConfig.sshClient
             breakOnTasks = mirakleConfig.breakOnTasks
         }
     }
