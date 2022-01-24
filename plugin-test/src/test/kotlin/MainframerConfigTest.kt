@@ -27,7 +27,9 @@ object MainframerConfigTest: Spek({
                 assertTrue(config.excludeCommon.isEmpty())
                 assertTrue(config.excludeLocal.isEmpty())
                 assertTrue(config.excludeRemote.isEmpty())
+
                 assertTrue(config.sshArgs.isEmpty())
+                assertEquals("ssh", config.sshClient)
 
                 assertEquals(setOf(
                         "--archive",
