@@ -160,16 +160,20 @@ open class Mirakle : Plugin<Gradle> {
 
                     isIgnoreExitValue = true
 
-                    standardOutput = modifyOutputStream(
-                            standardOutput ?: System.out,
-                            "${config.remoteFolder}/${gradlewRoot.name}",
-                            gradlewRoot.path
-                    )
-                    errorOutput = modifyOutputStream(
-                            errorOutput ?: System.err,
-                            "${config.remoteFolder}/${gradlewRoot.name}",
-                            gradlewRoot.path
-                    )
+                    // disable remote stream modification since it breaks Idea and Android Studio test result processing
+                    // https://github.com/Adambl4/mirakle/issues/83
+                    if (!gradle.containsIjTestInit()) {
+                        standardOutput = modifyOutputStream(
+                                standardOutput ?: System.out,
+                                "${config.remoteFolder}/${gradlewRoot.name}",
+                                gradlewRoot.path
+                        )
+                        errorOutput = modifyOutputStream(
+                                errorOutput ?: System.err,
+                                "${config.remoteFolder}/${gradlewRoot.name}",
+                                gradlewRoot.path
+                        )
+                    }
                 }.mustRunAfter(upload) as Exec
 
                 val download = project.task<Exec>("downloadFromRemote") {
@@ -690,4 +694,9 @@ fun mergeStartParamsWithProperties(
 
         addPropertiesToStartParams(mirakleProperties + mirakleLocalProperties, this)
     }
+}
+
+
+fun Gradle.containsIjTestInit() = startParameter.initScripts.any {
+    it.name == "ijtestinit.gradle"
 }
