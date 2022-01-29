@@ -226,6 +226,9 @@ open class Mirakle : Plugin<Gradle> {
                     // Gradle <7.3
                 }
 
+                execute.onlyIf {  upload.executionResult.orNull?.exitValue == 0 }
+                download.onlyIf { upload.executionResult.orNull?.exitValue == 0 }
+
                 if (!config.fallback) {
                     mirakle.doLast {
                         execute.executionResult.get().assertNormalExitValue()
@@ -254,9 +257,6 @@ open class Mirakle : Plugin<Gradle> {
 
                     upload.isIgnoreExitValue = true
                     upload.finalizedBy(fallback)
-
-                    execute.onlyIf { upload.executionResult.get().exitValue == 0 }
-                    download.onlyIf { upload.executionResult.get().exitValue == 0 }
 
                     mirakle.doLast {
                         if (execute.didWork) {
