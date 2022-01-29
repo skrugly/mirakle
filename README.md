@@ -21,7 +21,7 @@ initscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'io.github.adambl4:mirakle:1.4.3'
+        classpath 'io.github.adambl4:mirakle:1.5.0'
     }
 }
  
