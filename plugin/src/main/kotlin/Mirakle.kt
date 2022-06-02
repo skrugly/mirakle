@@ -143,9 +143,9 @@ open class Mirakle : Plugin<Gradle> {
                     args(config.sshArgs)
                     args(
                             config.host,
-                            "${config.remoteFolder}/\"${gradlewRoot.name}\"/gradlew",
+                            "\"${config.remoteFolder}/${gradlewRoot.name}/gradlew\"",
                             "-P$BUILD_ON_REMOTE=true",
-                            "-p ${config.remoteFolder}/\"${gradlewRoot.name}\""
+                            "-p \"${config.remoteFolder}/${gradlewRoot.name}\""
                     )
                     startParamsCopy.copy()
                             .apply {
@@ -179,7 +179,7 @@ open class Mirakle : Plugin<Gradle> {
                 val download = project.task<Exec>("downloadFromRemote") {
                     setCommandLine("rsync")
                     args(
-                            "${config.host}:${config.remoteFolder}/\"${gradlewRoot.name}\"/",
+                            "${config.host}:${config.remoteFolder}/${gradlewRoot.name}/",
                             "./",
                             "--rsh",
                             "ssh ${config.sshArgs.joinToString(separator = " ")}",
@@ -438,8 +438,8 @@ open class MirakleExtension {
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
     emptyList<String>()
-            .plus(taskNames.minus("mirakle"))
-            .plus(excludedTaskNames.map { "--exclude-task $it" })
+            .plus(taskNames.minus("mirakle").map { "\"$it\"" })
+            .plus(excludedTaskNames.map { "--exclude-task \"$it\"" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
             .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
             .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "\"$key=$value\"") })
