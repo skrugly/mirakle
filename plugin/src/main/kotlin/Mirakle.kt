@@ -362,8 +362,7 @@ open class Mirakle : Plugin<Gradle> {
                         setExcludedTaskNames(emptyList())
                     }
                 }
-
-                gradle.supportAndroidStudioAdvancedProfiling(config, upload, execute, download)
+                
                 gradle.uploadInitScripts(upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
@@ -581,50 +580,6 @@ fun Gradle.uploadInitScripts(upload: Exec, execute: Exec, download: Exec) {
 
     download.doFirst {
         download.args("--exclude=**/${initScriptsFolder.name}/")
-    }
-}
-
-//TODO test
-fun Gradle.supportAndroidStudioAdvancedProfiling(config: MirakleExtension, upload: Exec, execute: Exec, download: Exec) {
-    if (startParameter.projectProperties.containsKey("android.advanced.profiling.transforms")) {
-        println("Android Studio advanced profilling enabled. Profiler files will be uploaded to remote project dir.")
-
-        val studioProfilerJar = File(startParameter.projectProperties["android.advanced.profiling.transforms"])
-        val studioProfilerProp = File(startParameter.systemPropertiesArgs["android.profiler.properties"])
-
-        val jarInRootProject = gradle.rootProject.file(studioProfilerJar.name)
-        val propInRootProject = gradle.rootProject.file(studioProfilerProp.name)
-
-        if (jarInRootProject.exists()) jarInRootProject.delete()
-        if (propInRootProject.exists()) propInRootProject.delete()
-
-        upload.doFirst {
-            Files.copy(studioProfilerJar.toPath(), jarInRootProject.toPath())
-            Files.copy(studioProfilerProp.toPath(), propInRootProject.toPath())
-        }
-
-        upload.doLast {
-            jarInRootProject.delete()
-            propInRootProject.delete()
-        }
-
-        execute.doFirst {
-            val profilerJarPathArg = "android.advanced.profiling.transforms=${studioProfilerJar.toPath()}"
-            val profilerPropPathArg = "android.profiler.properties=${studioProfilerProp.toPath()}"
-
-            val rootProfilerJarArg = "android.advanced.profiling.transforms=${config.remoteFolder}/${gradle.rootProject.name}/${jarInRootProject.name}"
-            val rootProfilerPropArg = "android.profiler.properties=${config.remoteFolder}/${gradle.rootProject.name}/${propInRootProject.name}"
-
-            execute.args = execute.args!!.apply {
-                set(indexOf(profilerJarPathArg), rootProfilerJarArg)
-                set(indexOf(profilerPropPathArg), rootProfilerPropArg)
-            }
-        }
-
-        download.doFirst {
-            download.args("--exclude=${jarInRootProject.name}")
-            download.args("--exclude=${propInRootProject.name}")
-        }
     }
 }
 
