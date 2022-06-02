@@ -572,9 +572,11 @@ fun Gradle.uploadInitScripts(upload: Exec, execute: Exec, download: Exec) {
         }
     }
 
-    upload.doLast {
-        if (initScriptsFolder.exists())  {
-            initScriptsFolder.deleteRecursively()
+    gradle.taskGraph.afterTask { task ->
+        if (task == upload) {
+            if (initScriptsFolder.exists())  {
+                initScriptsFolder.deleteRecursively()
+            }
         }
     }
 
