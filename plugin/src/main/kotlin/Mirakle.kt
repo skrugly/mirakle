@@ -140,12 +140,18 @@ open class Mirakle : Plugin<Gradle> {
 
                 val execute = project.task<Exec>("executeOnRemote") {
                     setCommandLine(config.sshClient)
-                    args(config.sshArgs)
                     args(
-                            config.host,
-                            "\"${config.remoteFolder}/${gradlewRoot.name}/gradlew\"",
+                        config.sshArgs,
+                        config.host ?: ""
+                    )
+
+                    val remoteCommands = mutableListOf<String>()
+                    remoteCommands.addAll(
+                        listOf(
+                            "${config.remoteFolder}/${gradlewRoot.name}/gradlew",
                             "-P$BUILD_ON_REMOTE=true",
-                            "-p \"${config.remoteFolder}/${gradlewRoot.name}\""
+                            "-p ${config.remoteFolder}/${gradlewRoot.name}"
+                        )
                     )
                     startParamsCopy.copy()
                             .apply {
@@ -156,7 +162,9 @@ open class Mirakle : Plugin<Gradle> {
                             }
                             .let { mergeStartParamsWithProperties(it, gradlewRoot) }
                             .let(::startParamsToArgs)
-                            .let(::args)
+                            .let { remoteCommands.addAll(it)}
+
+                    args(remoteCommands.joinToString(" "))
 
                     isIgnoreExitValue = true
 
@@ -438,8 +446,8 @@ open class MirakleExtension {
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
     emptyList<String>()
-            .plus(taskNames.minus("mirakle").map { "\"$it\"" })
-            .plus(excludedTaskNames.map { "--exclude-task \"$it\"" })
+            .plus(taskNames.minus("mirakle"))
+            .plus(excludedTaskNames.map { "--exclude-task $it" })
             .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
             .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
             .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "\"$key=$value\"") })
