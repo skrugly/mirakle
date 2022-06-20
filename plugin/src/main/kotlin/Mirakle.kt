@@ -143,7 +143,7 @@ open class Mirakle : Plugin<Gradle> {
                     args(config.sshArgs)
                     args(
                             config.host,
-                            "\"${config.remoteFolder}/${gradlewRoot.name}/gradlew\"",
+                            "${config.remoteFolder}/${gradlewRoot.name}/gradlew",
                             "-P$BUILD_ON_REMOTE=true",
                             "-p \"${config.remoteFolder}/${gradlewRoot.name}\""
                     )
