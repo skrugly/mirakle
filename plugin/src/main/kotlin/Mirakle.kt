@@ -77,6 +77,11 @@ open class Mirakle : Plugin<Gradle> {
                 settingsFile?.renameTo(settingsBackup)
                 buildFile?.renameTo(buildFileBackup)
 
+                val emptySettings = settingsFile?.let {
+                    // it makes Gradle stop looking for a settings.gradle file in parent dir
+                    File(it.parentFile, "settings.gradle").apply { it.createNewFile() }
+                }
+
                 val versionCatalogBackup = versionCatalog?.map {
                     val backup = File(it.parent, "${it.name}_backup")
                     it.renameTo(backup)
@@ -84,6 +89,8 @@ open class Mirakle : Plugin<Gradle> {
                 }
 
                 gradle.afterMirakleEvaluate {
+                    emptySettings?.delete()
+
                     settingsFile?.let {
                         settingsBackup?.renameTo(it)
                     }
