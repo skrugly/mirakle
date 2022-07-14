@@ -148,3 +148,7 @@ fun Gradle.afterMirakleEvaluate(callback: () -> Unit) {
         }
     })
 }
+
+fun Gradle.containsIjTestInit() = startParameter.initScripts.any {
+    it.name == "ijtestinit.gradle"
+}
