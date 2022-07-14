@@ -54,6 +54,9 @@ open class Mirakle : Plugin<Gradle> {
         }
 
         gradle.startParameter.apply {
+            currentDir = gradlewRoot
+            projectDir = gradlewRoot
+            
             if (breakMode) {
                 // pass all the tasks alongside with "mirakle" to let Gradle calculate taskGraph
                 setTaskNames(listOf("mirakle") + taskNames)
@@ -80,7 +83,7 @@ open class Mirakle : Plugin<Gradle> {
 
                 val emptySettings = settingsFile?.let {
                     // it makes Gradle stop looking for a settings.gradle file in parent dir
-                    File(it.parentFile, "settings.gradle").apply { it.createNewFile() }
+                    File(it.parentFile, "settings.gradle").apply { createNewFile() }
                 }
 
                 val versionCatalogBackup = versionCatalog?.map {
