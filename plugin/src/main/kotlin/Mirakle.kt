@@ -41,14 +41,14 @@ open class Mirakle : Plugin<Gradle> {
         if (gradle.startParameter.isDryRun) return
 
         val gradlewRoot = findGradlewRoot(gradle.startParameter.currentDir)
-                ?: throw MirakleException("gradlew executable file is not found.")
+            ?: throw MirakleException("gradlew executable file is not found.")
 
         if (loadProperties(File(gradlewRoot, "local.properties"))["mirakle.enabled"] == "false") return
 
         gradle.assertNonSupportedFeatures()
 
         val startTime = System.currentTimeMillis()
-        
+
         val startParamsCopy = gradle.startParameter.copy()
         val breakMode = startParamsCopy.projectProperties.let {
             (it[BREAK_MODE]?.toBoolean() ?: false) || (it[BREAK_TASK]?.isNotBlank() ?: false)
@@ -57,7 +57,7 @@ open class Mirakle : Plugin<Gradle> {
         gradle.startParameter.apply {
             currentDir = gradlewRoot
             projectDir = gradlewRoot
-            
+
             if (breakMode) {
                 // pass all the tasks alongside with "mirakle" to let Gradle calculate taskGraph
                 setTaskNames(listOf("mirakle") + taskNames)
@@ -141,11 +141,11 @@ open class Mirakle : Plugin<Gradle> {
                 val upload = project.task<Exec>("uploadToRemote") {
                     setCommandLine("rsync")
                     args(
-                            fixPathForWindows(gradlewRoot.toString()),
-                            "${config.host}:${config.remoteFolder}",
-                            "--rsh",
-                            "ssh ${config.sshArgs.joinToString(separator = " ")}",
-                            "--exclude=mirakle.gradle"
+                        fixPathForWindows(gradlewRoot.toString()),
+                        "${config.host}:${config.remoteFolder}",
+                        "--rsh",
+                        "ssh ${config.sshArgs.joinToString(separator = " ")}",
+                        "--exclude=mirakle.gradle"
                     )
                     args(config.buildRsyncToRemoteArgs())
                 }
@@ -165,14 +165,14 @@ open class Mirakle : Plugin<Gradle> {
                     // https://github.com/Adambl4/mirakle/issues/83
                     if (!gradle.containsIjTestInit()) {
                         standardOutput = modifyOutputStream(
-                                standardOutput ?: System.out,
-                                "${config.remoteFolder}/${gradlewRoot.name}",
-                                gradlewRoot.path
+                            standardOutput ?: System.out,
+                            "${config.remoteFolder}/${gradlewRoot.name}",
+                            gradlewRoot.path
                         )
                         errorOutput = modifyOutputStream(
-                                errorOutput ?: System.err,
-                                "${config.remoteFolder}/${gradlewRoot.name}",
-                                gradlewRoot.path
+                            errorOutput ?: System.err,
+                            "${config.remoteFolder}/${gradlewRoot.name}",
+                            gradlewRoot.path
                         )
                     }
                 }.mustRunAfter(upload) as ExecuteOnRemoteTask
@@ -180,11 +180,11 @@ open class Mirakle : Plugin<Gradle> {
                 val download = project.task<Exec>("downloadFromRemote") {
                     setCommandLine("rsync")
                     args(
-                            "${config.host}:${config.remoteFolder}/${gradlewRoot.name}/",
-                            "./",
-                            "--rsh",
-                            "ssh ${config.sshArgs.joinToString(separator = " ")}",
-                            "--exclude=mirakle.gradle"
+                        "${config.host}:${config.remoteFolder}/${gradlewRoot.name}/",
+                        "./",
+                        "--rsh",
+                        "ssh ${config.sshArgs.joinToString(separator = " ")}",
+                        "--exclude=mirakle.gradle"
                     )
                     args(config.buildRsyncFromRemoteArgs())
                 }.mustRunAfter(execute) as Exec
@@ -246,16 +246,16 @@ open class Mirakle : Plugin<Gradle> {
                             println("Upload to remote failed. Continuing with fallback.")
 
                             val connection = GradleConnector.newConnector()
-                                    .forProjectDirectory(gradle.rootProject.projectDir)
-                                    .connect()
+                                .forProjectDirectory(gradle.rootProject.projectDir)
+                                .connect()
 
                             connection.use { connection ->
                                 connection.newBuild()
-                                        .withArguments(startParamsToArgs(startParamsCopy).plus("-P$FALLBACK=true"))
-                                        .setStandardInput(upload.standardInput ?: System.`in`)
-                                        .setStandardOutput(upload.standardOutput ?: System.out)
-                                        .setStandardError(upload.errorOutput ?: System.err)
-                                        .run()
+                                    .withArguments(startParamsToArgs(startParamsCopy).plus("-P$FALLBACK=true"))
+                                    .setStandardInput(upload.standardInput ?: System.`in`)
+                                    .setStandardOutput(upload.standardOutput ?: System.out)
+                                    .setStandardError(upload.errorOutput ?: System.err)
+                                    .run()
                             }
                         }
                     }
@@ -291,12 +291,13 @@ open class Mirakle : Plugin<Gradle> {
                                     it.enabled = false
                                 }
                             }
+
                             breakTasks.size == 1 -> {
                                 val breakTask = breakTasks.first()
 
                                 val tasksForRemoteExecution = graphWithoutMirakle
-                                        .takeWhile { it != breakTask }
-                                        .onEach { it.enabled = false }
+                                    .takeWhile { it != breakTask }
+                                    .onEach { it.enabled = false }
 
                                 execute.setTaskList(tasksForRemoteExecution.map(Task::getPath))
 
@@ -311,7 +312,9 @@ open class Mirakle : Plugin<Gradle> {
                                         }
 
                                         if (inputsNotInProjectDir.isNotEmpty()) {
-                                            throw MirakleException("${breakTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet. Tasks:\n${inputsNotInProjectDir.joinToString { it.path }}")
+                                            throw MirakleException(
+                                                "${breakTask.toString().capitalize()} declares input not from project dir. That is not supported by Mirakle yet. Tasks:\n${inputsNotInProjectDir.joinToString { it.path }}"
+                                            )
                                         }
 
                                         // Need to include all of the parent directories down to the desired directory
@@ -346,6 +349,7 @@ open class Mirakle : Plugin<Gradle> {
                                 mirakle.dependsOn(breakTask)
                                 gradle.logTasks(graphWithoutMirakle - tasksForRemoteExecution)
                             }
+
                             else -> {
                                 throw MirakleException("Task execution graph contains more than 1 task to break on. That is not supported by Mirakle yet. Tasks:\n${breakTasks.joinToString { it.path }}")
                             }
@@ -361,7 +365,7 @@ open class Mirakle : Plugin<Gradle> {
                         setExcludedTaskNames(emptyList())
                     }
                 }
-                
+
                 gradle.uploadInitScripts(upload, execute, download)
 
                 gradle.logTasks(upload, execute, download)
@@ -424,30 +428,30 @@ open class MirakleExtension {
     var remoteFolder: String = "~/mirakle"
 
     var excludeLocal = setOf(
-            "**/build"
+        "**/build"
     )
 
     var excludeRemote = setOf(
-            "**/src/"
+        "**/src/"
     )
 
     var excludeCommon = setOf(
-            ".gradle",
-            ".idea",
-            "**/.git/",
-            "**/local.properties",
-            "**/mirakle.properties",
-            "**/mirakle_local.properties"
+        ".gradle",
+        ".idea",
+        "**/.git/",
+        "**/local.properties",
+        "**/mirakle.properties",
+        "**/mirakle_local.properties"
     )
 
     var rsyncToRemoteArgs = setOf(
-            "--archive",
-            "--delete"
+        "--archive",
+        "--delete"
     )
 
     var rsyncFromRemoteArgs = setOf(
-            "--archive",
-            "--delete"
+        "--archive",
+        "--delete"
     )
 
     var sshArgs = emptySet<String>()
@@ -462,74 +466,74 @@ open class MirakleExtension {
     var breakOnTasks = emptySet<String>()
 
     internal fun buildRsyncToRemoteArgs(): Set<String> =
-            rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
+        rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
 
     internal fun buildRsyncFromRemoteArgs(): Set<String> =
-            rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
+        rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
 
     private fun Set<String>.mapToRsyncExcludeArgs(): Set<String> =
-            this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
+        this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
     emptyList<String>()
-            .plus(taskNames.minus("mirakle"))
-            .plus(excludedTaskNames.map { "--exclude-task \"$it\"" })
-            .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
-            .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
-            .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "$key=$value") })
-            .plus(systemPropertiesArgs.flatMap { (key, value) -> listOf("--system-prop", "$key=$value") })
-            .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
-            .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
-            .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second ?: emptyList())
-            .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second ?: emptyList())
-            .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { "$writeDependencyVerificationParam $it"})
-            .filterNotNull()
+        .plus(taskNames.minus("mirakle"))
+        .plus(excludedTaskNames.map { "--exclude-task \"$it\"" })
+        .plus(booleanParamsToOption.map { (param, option) -> if (param(this)) option else null })
+        .plus(negativeBooleanParamsToOption.map { (param, option) -> if (!param(this)) option else null })
+        .plus(projectProperties.minus(excludedProjectProperties).flatMap { (key, value) -> listOf("--project-prop", "$key=$value") })
+        .plus(systemPropertiesArgs.flatMap { (key, value) -> listOf("--system-prop", "$key=$value") })
+        .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
+        .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
+        .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second ?: emptyList())
+        .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second ?: emptyList())
+        .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { "$writeDependencyVerificationParam $it" })
+        .filterNotNull()
 }
 
 val booleanParamsToOption = listOf(
-        StartParameter::isProfile to "--profile",
-        StartParameter::isRerunTasks to "--rerun-tasks",
-        StartParameter::isRefreshDependencies to "--refresh-dependencies",
-        StartParameter::isContinueOnFailure to "--continue",
-        StartParameter::isOffline to "--offline",
-        StartParameter::isParallelProjectExecutionEnabled to "--parallel",
-        StartParameter::isConfigureOnDemand to "--configure-on-demand",
-        StartParameter::isBuildScan to "--scan",
-        StartParameter::isNoBuildScan to "--no-scan"
+    StartParameter::isProfile to "--profile",
+    StartParameter::isRerunTasks to "--rerun-tasks",
+    StartParameter::isRefreshDependencies to "--refresh-dependencies",
+    StartParameter::isContinueOnFailure to "--continue",
+    StartParameter::isOffline to "--offline",
+    StartParameter::isParallelProjectExecutionEnabled to "--parallel",
+    StartParameter::isConfigureOnDemand to "--configure-on-demand",
+    StartParameter::isBuildScan to "--scan",
+    StartParameter::isNoBuildScan to "--no-scan"
 )
 
 val negativeBooleanParamsToOption = listOf(
-        StartParameter::isBuildProjectDependencies to "--no-rebuild"
+    StartParameter::isBuildProjectDependencies to "--no-rebuild"
 )
 
 val excludedProjectProperties = listOf(
-        "android.injected.attribution.file.location" // disable Android Studio Build Analyzer collection on remote machine
+    "android.injected.attribution.file.location" // disable Android Studio Build Analyzer collection on remote machine
 )
 
 val logLevelToOption = listOf(
-        LogLevel.DEBUG to "--debug",
-        LogLevel.INFO to "--info",
-        LogLevel.WARN to "--warn",
-        LogLevel.QUIET to "--quiet"
+    LogLevel.DEBUG to "--debug",
+    LogLevel.INFO to "--info",
+    LogLevel.WARN to "--warn",
+    LogLevel.QUIET to "--quiet"
 )
 
 val showStacktraceToOption = listOf(
-        ShowStacktrace.ALWAYS to "--stacktrace",
-        ShowStacktrace.ALWAYS_FULL to "--full-stacktrace"
+    ShowStacktrace.ALWAYS to "--stacktrace",
+    ShowStacktrace.ALWAYS_FULL to "--full-stacktrace"
 )
 
 val consoleOutputToOption = listOf(
-        //ConsoleOutput.Auto to "--console auto", //default, no need to pass
-        ConsoleOutput.Plain to listOf("--console", "plain"),
-        ConsoleOutput.Rich to listOf("--console", "rich")
+    //ConsoleOutput.Auto to "--console auto", //default, no need to pass
+    ConsoleOutput.Plain to listOf("--console", "plain"),
+    ConsoleOutput.Rich to listOf("--console", "rich")
 )
 
 // related to gradle dependency verification
 // https://docs.gradle.org/current/userguide/dependency_verification.html
 val verificationModeToOption = listOf(
     //DependencyVerificationMode.STRICT to "--dependency-verification strict", //default, no need to pass
-    DependencyVerificationMode.LENIENT to listOf("--dependency-verification","lenient"),
+    DependencyVerificationMode.LENIENT to listOf("--dependency-verification", "lenient"),
     DependencyVerificationMode.OFF to listOf("--dependency-verification", "off")
 )
 
@@ -599,7 +603,7 @@ const val BREAK_TASK = "mirakle.break.task"
 fun Gradle.uploadInitScripts(upload: Exec, execute: ExecuteOnRemoteTask, download: Exec) {
     if (startParameter.initScripts.isEmpty()) return
 
-    val initScriptsFolder  = File(gradle.rootProject.rootDir, "mirakle_init_scripts")
+    val initScriptsFolder = File(gradle.rootProject.rootDir, "mirakle_init_scripts")
     initScriptsFolder.mkdirs()
 
     startParameter.initScripts.forEach { script ->
@@ -618,7 +622,7 @@ fun Gradle.uploadInitScripts(upload: Exec, execute: ExecuteOnRemoteTask, downloa
 
     gradle.taskGraph.afterTask { task ->
         if (task == upload) {
-            if (initScriptsFolder.exists())  {
+            if (initScriptsFolder.exists()) {
                 initScriptsFolder.deleteRecursively()
             }
         }
@@ -667,8 +671,8 @@ class DownloadInParallelWorker @Inject constructor(val downloadInterval: Long) :
 *   3. GRADLE_USER_HOME/gradle.properties
 * */
 fun mergeStartParamsWithProperties(
-        startParameter: StartParameter,
-        gradlewRoot: File
+    startParameter: StartParameter,
+    gradlewRoot: File
 ): StartParameter {
     fun addPropertiesToStartParams(properties: Map<String, String>, startParameter: StartParameter) {
         properties.onEach { (key, value) ->
