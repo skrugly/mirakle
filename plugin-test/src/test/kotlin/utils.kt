@@ -280,6 +280,20 @@ val ASSERT_START_PARAM_CONSOLE_OUTPUT_IS = fun(enumName: String) =
             throw Exception("ConsoleOutput must be $enumName")
         """
 
+val ASSERT_START_PARAM_DEPENDENCY_VERIFICATION_MODE_IS = fun(enumName: String) =
+    """
+        if(project.gradle.startParameter.dependencyVerificationMode != DependencyVerificationMode.$enumName)
+            throw Exception("Dependency verification mode must be $enumName")
+        """
+
+val ASSERT_START_PARAM_WRITE_DEPENDENCY_VERIFICATION = fun(mode: String) =
+    """
+        if(project.gradle.startParameter.getWriteDependencyVerifications().join(',') != mode)
+            throw Exception("Write dependency verification mode must be $mode")
+        """
+
+
+
 val ASSERT_CONTAINS_TASKS = fun(tasks: List<String>) =
         """
         if(!gradle.startParameter.taskNames.containsAll(listOf(${tasks.joinToString { "\"$it\"" }})))

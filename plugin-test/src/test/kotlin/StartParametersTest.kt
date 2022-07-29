@@ -129,6 +129,42 @@ object StartParametersTest : Spek({
                 }
             }
 
+            describe("dependency verification start params") {
+                verificationModeToOption.onEach { (param, option) ->
+                    given("param ${param.name}") {
+                        on("passing $option") {
+
+                            buildFileWriter().use {
+                                it.write(ASSERT_START_PARAM_DEPENDENCY_VERIFICATION_MODE_IS(param.name))
+                            }
+
+                            it("should receive ${param.name}") {
+                                gradleRunner.addArgs(option.split(" ")[0], option.split(" ")[1]).build()
+                            }
+                        }
+                    }
+                }
+            }
+
+            describe("write dependency verifications start params") {
+                val writeDependencyVerificationModes = listOf(
+                        "sha256",
+                        "pgp",
+                        "sha256,pgp"
+                )
+                writeDependencyVerificationModes.onEach { mode ->
+                    on("mode $mode") {
+                        buildFileWriter().use {
+                            it.write(ASSERT_START_PARAM_WRITE_DEPENDENCY_VERIFICATION(mode))
+                        }
+
+                        it("should receive same $mode") {
+                            gradleRunner.addArgs("--write-verification-metadata $mode")
+                        }
+                    }
+                }
+            }
+
             on("passing tasks") {
                 val tasks = listOf("task1", "task2", "task3")
 

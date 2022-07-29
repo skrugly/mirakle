@@ -6,6 +6,7 @@ import org.gradle.StartParameter
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Task
+import org.gradle.api.artifacts.verification.DependencyVerificationMode
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
@@ -481,6 +482,8 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
             .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
             .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
             .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second)
+            .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second)
+            .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { "$writeDependencyVerificationParam $it"})
             .filterNotNull()
 }
 
@@ -521,6 +524,16 @@ val consoleOutputToOption = listOf(
         //ConsoleOutput.Auto to "--console auto", //default, no need to pass
         ConsoleOutput.Rich to "--console rich"
 )
+
+// related to gradle dependency verification
+// https://docs.gradle.org/current/userguide/dependency_verification.html
+val verificationModeToOption = listOf(
+    DependencyVerificationMode.STRICT to "--dependency-verification strict",
+    DependencyVerificationMode.LENIENT to "--dependency-verification lenient",
+    DependencyVerificationMode.OFF to "--dependency-verification off"
+)
+
+const val writeDependencyVerificationParam = "--write-verification-metadata"
 
 //since build occurs on a remote machine, console output will contain remote directories
 //to let IDE and other tools properly parse the output, mirakle need to replace remote dir by local one
