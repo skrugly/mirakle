@@ -481,8 +481,8 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
             .plus(systemPropertiesArgs.flatMap { (key, value) -> listOf("--system-prop", "$key=$value") })
             .plus(logLevelToOption.firstOrNull { (level, _) -> logLevel == level }?.second)
             .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
-            .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second)
-            .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second)
+            .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second ?: emptyList())
+            .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second ?: emptyList())
             .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { "$writeDependencyVerificationParam $it"})
             .filterNotNull()
 }
@@ -520,17 +520,17 @@ val showStacktraceToOption = listOf(
 )
 
 val consoleOutputToOption = listOf(
-        ConsoleOutput.Plain to "--console plain",
         //ConsoleOutput.Auto to "--console auto", //default, no need to pass
-        ConsoleOutput.Rich to "--console rich"
+        ConsoleOutput.Plain to listOf("--console", "plain"),
+        ConsoleOutput.Rich to listOf("--console", "rich")
 )
 
 // related to gradle dependency verification
 // https://docs.gradle.org/current/userguide/dependency_verification.html
 val verificationModeToOption = listOf(
-    DependencyVerificationMode.STRICT to "--dependency-verification strict",
-    DependencyVerificationMode.LENIENT to "--dependency-verification lenient",
-    DependencyVerificationMode.OFF to "--dependency-verification off"
+    //DependencyVerificationMode.STRICT to "--dependency-verification strict", //default, no need to pass
+    DependencyVerificationMode.LENIENT to listOf("--dependency-verification","lenient"),
+    DependencyVerificationMode.OFF to listOf("--dependency-verification", "off")
 )
 
 const val writeDependencyVerificationParam = "--write-verification-metadata"
