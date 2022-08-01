@@ -490,7 +490,7 @@ fun startParamsToArgs(params: StartParameter) = with(params) {
         .plus(showStacktraceToOption.firstOrNull { (show, _) -> showStacktrace == show }?.second)
         .plus(consoleOutputToOption.firstOrNull { (console, _) -> consoleOutput == console }?.second ?: emptyList())
         .plus(verificationModeToOption.firstOrNull { (verificationMode, _) -> dependencyVerificationMode == verificationMode }?.second ?: emptyList())
-        .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { "$writeDependencyVerificationParam $it" })
+        .plus(writeDependencyVerifications.joinToString(",").ifBlank { null }?.let { listOf(writeDependencyVerificationParam, it) } ?: emptyList())
         .filterNotNull()
 }
 
