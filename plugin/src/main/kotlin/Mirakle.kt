@@ -392,7 +392,7 @@ open class ExecuteOnRemoteTask : Exec() {
         val remoteFolder = "${config.remoteFolder}/${gradlewRoot.name}"
         val additionalCommand = config.remoteBashCommand?.ifBlank { null }?.let { "&& $it" } ?: ""
         val remoteGradleCommand = "./gradlew -P$BUILD_ON_REMOTE=true $taskArgs"
-        val remoteBashCommand = "echo 'set -e $additionalCommand && cd \"$remoteFolder\" && $remoteGradleCommand' | bash"
+        val remoteBashCommand = "echo 'set -e $additionalCommand && cd $remoteFolder && $remoteGradleCommand' | bash"
 
         setCommandLine(config.sshClient)
         args(config.sshArgs)
