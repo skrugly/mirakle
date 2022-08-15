@@ -394,6 +394,8 @@ open class ExecuteOnRemoteTask : Exec() {
         val remoteGradleCommand = "./gradlew -P$BUILD_ON_REMOTE=true $taskArgs"
         val remoteBashCommand = listOf(
             "set -e $additionalCommand",
+            "export LANG=C.UTF-8",
+            "export LC_CTYPE=C.UTF-8",
             "cd $remoteFolder",
             remoteGradleCommand
         ).joinToString(" && ")
