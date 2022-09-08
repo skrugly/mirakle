@@ -205,10 +205,10 @@ Put this into `USER_HOME/.gradle/init.d/mirakle_init.gradle` or `PROJECT_DIR/mir
 ```
 taskGraph.whenReady { taskGraph ->
     if (taskGraph.hasTask(":executeOnRemote")) {
-        gradle.rootProject.executeOnRemote.doFirst {
-            println("============REMOTE GRADLE ARGUMENTS===============")
-            println(rootProject.executeOnRemote.args.drop(2).join("\n"))
-            println("============REMOTE GRADLE ARGUMENTS===============")
+        gradle.rootProject.executeOnRemote.doLast {
+            println("============REMOTE COMMAND===============")
+            println(rootProject.executeOnRemote.commandLine)
+            println("============REMOTE COMMAND===============")
         }
     }
 }
