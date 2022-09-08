@@ -21,7 +21,7 @@ initscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'io.github.adambl4:mirakle:1.5.2'
+        classpath 'io.github.adambl4:mirakle:1.6.0'
     }
 }
  
@@ -97,6 +97,7 @@ mirakle {
     downloadInParallel true
     downloadInterval 2000
     breakOnTasks = ["install", "package"] // regex pattern
+    remoteBashCommand = "echo 'Hello World!'"
 }
 ```
 

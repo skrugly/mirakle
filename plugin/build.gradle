@@ -84,7 +84,7 @@ signing {
 }
 
 task validatePublishing {
-    doLast {
+    doFirst {
         validateTagAndVersion()
         if (gradle.startParameter.configureOnDemand)
             //WTF https://stackoverflow.com/questions/25668020/gradle-artifactory-plugin-not-generating-pom-file/32064236#comment61270226_32064236

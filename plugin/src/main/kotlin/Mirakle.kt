@@ -380,7 +380,7 @@ open class ExecuteOnRemoteTask : Exec() {
     @Internal lateinit var gradlewRoot: File
     @Internal lateinit var startParams: StartParameter
     private val tasksList = mutableListOf<String>()
-    private val customArgs = mutableListOf<String>()
+    private val additionalArgs = mutableListOf<String>()
 
     override fun exec() {
         val startParamsArgs = startParams.copy()
@@ -388,22 +388,25 @@ open class ExecuteOnRemoteTask : Exec() {
             .let { mergeStartParamsWithProperties(it, gradlewRoot) }
             .let(::startParamsToArgs)
 
-        val taskArgs = startParamsArgs.plus(customArgs).joinToString(separator = " ") { "\"$it\"" }
+        val taskArgs = startParamsArgs.plus(additionalArgs).joinToString(separator = " ") { "\"$it\"" }
         val remoteFolder = "${config.remoteFolder}/${gradlewRoot.name}"
-        val additionalCommand = config.remoteBashCommand?.ifBlank { null }?.let { "&& $it" } ?: ""
+        val additionalCommand = config.remoteBashCommand?.ifBlank { null }
         val remoteGradleCommand = "./gradlew -P$BUILD_ON_REMOTE=true $taskArgs"
-        val remoteBashCommand = listOf(
-            "set -e $additionalCommand",
+        val remoteBashCommand = listOfNotNull(
+            "set -e",
+            additionalCommand,
             "export LANG=C.UTF-8",
             "export LC_CTYPE=C.UTF-8",
             "cd $remoteFolder",
             remoteGradleCommand
-        ).joinToString(" && ")
+        ).joinToString(separator = " && ")
 
         setCommandLine(config.sshClient)
         args(config.sshArgs)
         args(config.host)
         args("echo '$remoteBashCommand' | bash")
+
+        //println("Remote bash command = $commandLine")
 
         super.exec()
     }
@@ -413,8 +416,8 @@ open class ExecuteOnRemoteTask : Exec() {
         tasksList.addAll(tasks)
     }
 
-    internal fun addCustomArgs(list: List<String>) {
-        customArgs.addAll(list)
+    internal fun addArgs(list: List<String>) {
+        additionalArgs.addAll(list)
     }
 }
 
@@ -625,7 +628,7 @@ fun Gradle.uploadInitScripts(upload: Exec, execute: ExecuteOnRemoteTask, downloa
         }
 
         execute.doFirst {
-            execute.addCustomArgs(listOf("--init-script", "${initScriptsFolder.name}/${initScriptCopy.name}"))
+            execute.addArgs(listOf("--init-script", "${initScriptsFolder.name}/${initScriptCopy.name}"))
         }
     }
 
