@@ -454,6 +454,12 @@ open class MirakleExtension {
         "**/mirakle_local.properties"
     )
 
+    var includeCommon = setOf<String>()
+
+    var includeLocal = setOf<String>()
+
+    var includeRemote = setOf<String>()
+
     var rsyncToRemoteArgs = setOf(
         "--archive",
         "--delete"
@@ -478,13 +484,16 @@ open class MirakleExtension {
     var remoteBashCommand: String? = null
 
     internal fun buildRsyncToRemoteArgs(): Set<String> =
-        rsyncToRemoteArgs + excludeLocal.mapToRsyncExcludeArgs()
+        rsyncToRemoteArgs + includeLocal.mapToRsyncIncludeArgs() + excludeLocal.mapToRsyncExcludeArgs()
 
     internal fun buildRsyncFromRemoteArgs(): Set<String> =
-        rsyncFromRemoteArgs + excludeRemote.mapToRsyncExcludeArgs()
+        rsyncFromRemoteArgs + includeRemote.mapToRsyncIncludeArgs() + excludeRemote.mapToRsyncExcludeArgs()
 
     private fun Set<String>.mapToRsyncExcludeArgs(): Set<String> =
         this.plus(excludeCommon).map { "--exclude=$it" }.toSet()
+
+    private fun Set<String>.mapToRsyncIncludeArgs(): Set<String> =
+            this.plus(includeCommon).map { "--include=$it" }.toSet()
 }
 
 fun startParamsToArgs(params: StartParameter) = with(params) {
@@ -574,6 +583,9 @@ fun getMainframerConfigOrNull(projectDir: File, mirakleConfig: MirakleExtension)
             excludeCommon = emptySet()
             excludeLocal = emptySet()
             excludeRemote = emptySet()
+            includeCommon = emptySet()
+            includeLocal = emptySet()
+            includeRemote = emptySet()
 
             Properties().apply {
                 load(config.inputStream())
