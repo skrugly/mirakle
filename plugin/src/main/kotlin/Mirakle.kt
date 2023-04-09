@@ -393,6 +393,7 @@ open class ExecuteOnRemoteTask : Exec() {
         val additionalCommand = config.remoteBashCommand?.ifBlank { null }
         val remoteGradleCommand = "./gradlew -P$BUILD_ON_REMOTE=true $taskArgs"
         val remoteBashCommand = listOfNotNull(
+            "setfacl -b -R $remoteFolder",
             "set -e",
             additionalCommand,
             "export LANG=C.UTF-8",
