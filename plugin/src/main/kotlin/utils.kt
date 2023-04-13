@@ -12,6 +12,7 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.service.ServiceRegistry
 import java.io.File
+import java.io.FileInputStream
 import java.lang.reflect.Field
 import java.util.*
 
@@ -122,9 +123,30 @@ fun findGradlewRoot(root: File): File? {
     }
 }
 
-fun loadProperties(file: File) = file.takeIf(File::exists)?.let {
-    Properties().apply { load(it.inputStream()) }.toMap() as Map<String, String>
-} ?: emptyMap()
+fun loadProperties(file: File): Map<String, String> {
+    val properties = Properties()
+    if (file.exists() && file.isFile) {
+        var inputStream: FileInputStream? = null
+        try {
+            inputStream = file.inputStream()
+            properties.load(inputStream)
+        } catch (e: Throwable) {
+        } finally {
+            try {
+                if (inputStream != null) {
+                    inputStream.close()
+                }
+            } catch (e: Throwable) {
+            }
+        }
+    }
+    val result: Map<String, String> = try {
+        properties.toMap() as? Map<String, String> ?: emptyMap()
+    } catch (e: Throwable) {
+        emptyMap()
+    }
+    return result
+}
 
 fun Gradle.afterMirakleEvaluate(callback: () -> Unit) {
     var wasCallback = false
